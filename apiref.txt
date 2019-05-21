@@ -1,0 +1,4 @@
+direction, command, req_data, res_data
+=============================
+><, get_lobbies, -, LobbyList
+><

@@ -1,0 +1,21 @@
+{
+  "name": "pokerbackend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "App.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^12.0.2",
+    "@types/websocket": "0.0.40",
+    "typescript": "^3.4.5"
+  },
+  "dependencies": {
+    "ste-simple-events": "^1.4.10",
+    "websocket": "^1.0.28"
+  }
+}
