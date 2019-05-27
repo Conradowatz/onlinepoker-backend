@@ -4,10 +4,17 @@ import {connection, request, server as WebSocketServer} from "websocket";
 import * as http from "http";
 import * as PokerMessage from "./messages/PokerMessage";
 import {plainToClass, serialize} from "class-transformer";
-import {Command, GenericMessage} from "./messages/PokerMessage";
-import {validate, validateSync, ValidatorOptions} from "class-validator";
+import {
+  Command,
+  ServerMessage,
+  ClientMessage,
+  ServerCommand,
+  ClientCommand
+} from "./messages/PokerMessage";
+import {validateSync, ValidatorOptions} from "class-validator";
+import {CreateLobbyRequest, JoinLobbyRequest} from "./messages/ApiObjects";
 
-export class PokerAPI extends EventEmitter {
+export class PokerServer extends EventEmitter {
 
   static protocol = "poker1";
 
@@ -41,7 +48,7 @@ export class PokerAPI extends EventEmitter {
    */
   private onRequest(request: request) {
     //don't allow all connections
-    if (!PokerAPI.originIsAllowed(request.origin)) {
+    if (!PokerServer.originIsAllowed(request.origin)) {
       // Make sure we only accept requests from an allowed origin
       request.reject();
       console.log('Connection from origin ' + request.origin + ' rejected.');
@@ -56,12 +63,12 @@ export class PokerAPI extends EventEmitter {
     }
 
     //accept with protocol number
-    if (!request.requestedProtocols.includes(PokerAPI.protocol)) {
+    if (!request.requestedProtocols.includes(PokerServer.protocol)) {
       request.reject();
       console.log('Connection with unknown protocol rejected.');
       return;
     }
-    let connection = request.accept(PokerAPI.protocol, request.origin);
+    let connection = request.accept(PokerServer.protocol, request.origin);
     console.log((new Date()) + ' New connection accepted from: ' + connection.socket.localAddress);
     this.onNewConnection(connection);
 
@@ -92,7 +99,7 @@ export class PokerAPI extends EventEmitter {
    */
   private onNewConnection(connection: connection) {
     //determine unique id
-    let id = Math.random() * this.maxConnections;
+    let id = Math.floor(Math.random() * this.maxConnections);
     while (this.idConnectionMap.has(id)) {
       id = (id + 1) % this.maxConnections;
     }
@@ -109,19 +116,22 @@ export class PokerAPI extends EventEmitter {
    * @param message
    */
   private onMessage(connection: connection, message: string) {
+    let plainMessageObject;
     try {
-      let plainMessageObject = JSON.parse(message);
-      let genericMessage = plainToClass(GenericMessage, plainMessageObject);
-      //check if its a valid message
-      if (PokerAPI.validateObject(genericMessage)) {
-        this.emit(genericMessage.command,
-            this.connectionIdMap.get(connection), genericMessage.data);
-      } else {
-        console.log("Received malformed message:");
-      }
+      plainMessageObject = JSON.parse(message);
     } catch (e) {
       console.log(e);
       console.log("Received non-JSON message.");
+      return;
+    }
+    let clientMessage = plainToClass(ClientMessage, plainMessageObject);
+    //check if its a valid message
+    if (PokerServer.validateObject(clientMessage)
+        && PokerServer.validateMessage(clientMessage.command, clientMessage.data)) {
+      this.emit(clientMessage.command,
+          this.connectionIdMap.get(connection), clientMessage.data);
+    } else {
+      console.log("Received malformed message, ignoring.");
     }
   }
 
@@ -135,14 +145,14 @@ export class PokerAPI extends EventEmitter {
     console.log("User disconnected. Code: " + reasonCode + " Desc: " + description);
   }
 
-  public sendMessage(id: number, command: Command, message: PokerMessage.PokerMessage) {
-    let m = new GenericMessage();
+  public sendMessage(id: number, command: Command | ServerCommand, message: PokerMessage.PokerMessage) {
+    let m = new ServerMessage();
     m.command = command;
     m.data = message;
     this.idConnectionMap.get(id).sendUTF(serialize(m));
   }
 
-  public sendMessageCall(id: number, command: Command, message: PokerMessage.PokerMessage,
+  public sendMessageCall(id: number, command: Command | ServerCommand, message: PokerMessage.PokerMessage,
                          callback: (data: PokerMessage.PokerMessage) => void) {
     this.sendMessage(id, command, message);
     //wait for response with the same command from the same user and pass it to callback
@@ -157,8 +167,8 @@ export class PokerAPI extends EventEmitter {
     this.on(command, listener);
   }
 
-  public broadcastMessage(command: Command, message: PokerMessage.PokerMessage) {
-    let m = new GenericMessage();
+  public broadcastMessage(command: Command | ServerCommand, message: PokerMessage.PokerMessage) {
+    let m = new ServerMessage();
     m.command = command;
     m.data = message;
     this.wsServer.connections.forEach((c) => {
@@ -171,7 +181,7 @@ export class PokerAPI extends EventEmitter {
     skipMissingProperties: false
   };
 
-  public static validateObject(o) {
+  private static validateObject(o) {
     let errors = validateSync(o, this.validatorOptions);
     if (errors.length>0) {
       console.log(errors);
@@ -179,6 +189,16 @@ export class PokerAPI extends EventEmitter {
     } else {
       return true;
     }
+  }
+
+  private static validateMessage(command: Command | ClientCommand, message: PokerMessage.PokerMessage):boolean {
+    switch (command) {
+      case "get_lobbies": return message == undefined;
+      case "join_lobby": return PokerServer.validateObject(plainToClass(JoinLobbyRequest, message));
+      case "create_lobby": return PokerServer.validateObject(plainToClass(CreateLobbyRequest, message));
+      default: return false;
+    }
+
   }
 
 }

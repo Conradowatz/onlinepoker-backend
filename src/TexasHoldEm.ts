@@ -10,13 +10,13 @@ export class TexasHoldEm extends GameMode {
   }
 
   getMaxPlayers(): number {
-    return this.options.maxPlayers;
+    return 6;
   }
 
   apiGameMode(): ApiGameMode {
     return {
       type: "texasholdem",
-      maxPlayers: this.options.maxPlayers
+      maxPlayers: this.getMaxPlayers()
     };
   }
 

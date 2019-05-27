@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import {PokerAPI} from "./pokerapi/PokerAPI";
+import {PokerServer} from "./pokerapi/PokerServer";
 import * as Game from "./src/Game"
 
 const version = "v1.0";
@@ -29,7 +29,7 @@ if (typeof process.env.PORT === "undefined") {
   maxConnections = Number.parseInt(process.env.MAX_CONNECTIONS);
 }
 
-Game.startGame(new PokerAPI(port, maxConnections));
+Game.startGame(new PokerServer(port, maxConnections));
 
 process.on('SIGTERM', function() {
   console.log("Received SIGTERM. Stopping server...");

@@ -7,9 +7,8 @@ import {LobbyPreview, Lobby as ApiLobby, Player as ApiPlayer} from "../pokerapi/
 
 export class Lobby {
 
-  users = Array<User>();
-  players = Array<Player>();
-  spectators = Array<Spectator>();
+  players = new Map<number, Player>();
+  spectators = new Map<number, Spectator>();
   running: boolean;
   gameMode: GameMode;
   maxPlayers: number;
@@ -17,6 +16,14 @@ export class Lobby {
   constructor(public id:string, public leader: User, public name: string, public hidden: boolean) {
     this.gameMode = new TexasHoldEm();
     this.running = false;
+  }
+
+  spectate(id: number) {
+    this.spectators.set(id, new Spectator(id));
+  }
+
+  join(id: number, name: string) {
+    this.players.set(id, new Player(id, name));
   }
 
   apiLobbyPreview():LobbyPreview {
@@ -27,7 +34,7 @@ export class Lobby {
     return {
       name: this.name,
       id: this.id,
-      currentPlayers: this.users.length,
+      currentPlayers: this.players.size,
       maxPlayers: this.maxPlayers,
       gameMode: this.gameMode.getName(),
       players: players
@@ -35,14 +42,14 @@ export class Lobby {
   }
   apiLobby(id: number):ApiLobby {
     let playerMap = new Map<number, ApiPlayer>();
-    for (let player of this.players) {
-      playerMap.set(player.id, player.apiPlayer());
+    for (let [id, player] of this.players) {
+      playerMap.set(id, player.apiPlayer());
     }
     return {
       name: this.name,
       id: this.id,
-      currentPlayers: this.players.length,
-      currentSpectators: this.spectators.length,
+      currentPlayers: this.players.size,
+      currentSpectators: this.spectators.size,
       hidden: this.hidden,
       gameMode: this.gameMode.apiGameMode(),
       players: playerMap,
