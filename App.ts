@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import {PokerAPI} from "./pokerapi/PokerAPI";
 import * as Game from "./src/Game"
 
@@ -29,3 +30,8 @@ if (typeof process.env.PORT === "undefined") {
 }
 
 Game.startGame(new PokerAPI(port, maxConnections));
+
+process.on('SIGTERM', function() {
+  console.log("Received SIGTERM. Stopping server...");
+  Game.stopGame();
+});

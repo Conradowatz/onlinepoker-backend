@@ -2,8 +2,10 @@ import {EventEmitter} from "events";
 import {Server as HttpServer} from "http";
 import {connection, request, server as WebSocketServer} from "websocket";
 import * as http from "http";
-import GenericMessage = PokerMessages.GenericMessage;
-import Message = PokerMessages.Message;
+import * as PokerMessage from "./messages/PokerMessage";
+import {plainToClass, serialize} from "class-transformer";
+import {Command, GenericMessage} from "./messages/PokerMessage";
+import {validate, validateSync, ValidatorOptions} from "class-validator";
 
 export class PokerAPI extends EventEmitter {
 
@@ -108,18 +110,17 @@ export class PokerAPI extends EventEmitter {
    */
   private onMessage(connection: connection, message: string) {
     try {
-      let parsedMessage:GenericMessage = JSON.parse(message);
+      let plainMessageObject = JSON.parse(message);
+      let genericMessage = plainToClass(GenericMessage, plainMessageObject);
       //check if its a valid message
-      if (('command' in parsedMessage)
-          && (typeof parsedMessage.command === "string")
-          && (PokerMessages.commands.includes(parsedMessage.command))) {
-
-        this.emit(parsedMessage.command,
-            this.connectionIdMap.get(connection), parsedMessage.data);
+      if (PokerAPI.validateObject(genericMessage)) {
+        this.emit(genericMessage.command,
+            this.connectionIdMap.get(connection), genericMessage.data);
       } else {
-        console.log("Received malformed message.");
+        console.log("Received malformed message:");
       }
     } catch (e) {
+      console.log(e);
       console.log("Received non-JSON message.");
     }
   }
@@ -134,32 +135,50 @@ export class PokerAPI extends EventEmitter {
     console.log("User disconnected. Code: " + reasonCode + " Desc: " + description);
   }
 
-  public sendMessage(id: number, command: string, message: Message) {
-    let m:GenericMessage = {
-      command: command,
-      data: message
-    };
-    this.idConnectionMap.get(id).sendUTF(JSON.stringify(m));
+  public sendMessage(id: number, command: Command, message: PokerMessage.PokerMessage) {
+    let m = new GenericMessage();
+    m.command = command;
+    m.data = message;
+    this.idConnectionMap.get(id).sendUTF(serialize(m));
   }
 
-  public sendMessageCall(id: number, command: string, message: Message, callback: (...args: any) => void) {
+  public sendMessageCall(id: number, command: Command, message: PokerMessage.PokerMessage,
+                         callback: (data: PokerMessage.PokerMessage) => void) {
     this.sendMessage(id, command, message);
     //wait for response with the same command from the same user and pass it to callback
-    this.once(command, (r_id: number, ...r_args) => {
+    let pokerAPI = this;
+    let listener = function(r_id: number, ...r_args) {
       if (r_id === id) {
         callback(r_args);
+        //deregister once its fired
+        pokerAPI.off(command, this);
       }
-    });
+    };
+    this.on(command, listener);
   }
 
-  public broadcastMessage(command: string, message: Message) {
-    let m:GenericMessage = {
-      command: command,
-      data: message
-    };
+  public broadcastMessage(command: Command, message: PokerMessage.PokerMessage) {
+    let m = new GenericMessage();
+    m.command = command;
+    m.data = message;
     this.wsServer.connections.forEach((c) => {
-      c.sendUTF(JSON.stringify(m));
+      c.sendUTF(serialize(m));
     })
+  }
+
+  private static validatorOptions: ValidatorOptions = {
+    forbidUnknownValues: true,
+    skipMissingProperties: false
+  };
+
+  public static validateObject(o) {
+    let errors = validateSync(o, this.validatorOptions);
+    if (errors.length>0) {
+      console.log(errors);
+      return false;
+    } else {
+      return true;
+    }
   }
 
 }

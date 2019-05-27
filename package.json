@@ -15,6 +15,9 @@
     "typescript": "^3.4.5"
   },
   "dependencies": {
+    "class-transformer": "^0.2.3",
+    "class-validator": "^0.9.1",
+    "reflect-metadata": "^0.1.13",
     "ste-simple-events": "^1.4.10",
     "websocket": "^1.0.28"
   }

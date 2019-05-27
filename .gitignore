@@ -2,3 +2,7 @@ node_modules
 *.js
 *.js.map
 pokerbackend.iml
+.idea
+src/*.d.ts
+pokerapi/**/*.d.ts
+App.d.ts
