@@ -1,10 +1,11 @@
 import {User} from "./User";
 import {Player as ApiPlayer} from "../pokerapi/messages/ApiObjects";
 
-export class Player extends User {
+export class Player implements User {
 
-  id: number;
-  name: string;
+  constructor(public id: number, public name:string) {
+
+  }
 
   apiPlayer():ApiPlayer {
     return {
