@@ -36,16 +36,17 @@ function registerListeners() {
   api.on("join_lobby", (id, req: JoinLobbyRequest) => {
 
     let response = new JoinLobbyResponse();
+    response.success = false;
     //check if lobby exists
     if (!lobbies.has(req.id)) {
-      response.success = false;
       response.reason = "unknown_id";
     } else {
       //check if it has free slots
       let lobby = lobbies.get(req.id);
-      if (lobby.players.size == lobby.maxPlayers) {
-        response.success = false;
+      if (lobby.players.size == lobby.gameMode.getMaxPlayers()) {
         response.reason = "full";
+      } else if (!lobby.gameMode.isJoinable()) {
+        response.reason = "not_joinable";
       } else {
         //perform join
         if (req.spectate) {

@@ -12,7 +12,13 @@ import {
   ClientCommand
 } from "./messages/PokerMessage";
 import {validateSync, ValidatorOptions} from "class-validator";
-import {CreateLobbyRequest, JoinLobbyRequest} from "./messages/ApiObjects";
+import {
+  ChangeGameModeRequest, ChatOut,
+  CreateLobbyRequest,
+  JoinLobbyRequest,
+  Settings,
+  TexasHoldEmSettings
+} from "./messages/ApiObjects";
 
 export class PokerServer extends EventEmitter {
 
@@ -128,7 +134,14 @@ export class PokerServer extends EventEmitter {
     //check if its a valid message
     if (PokerServer.validateObject(clientMessage)
         && PokerServer.validateMessage(clientMessage.command, clientMessage.data)) {
-      this.emit(clientMessage.command,
+
+      //append lobbyId to command if available
+      let command = clientMessage.command;
+      if (clientMessage.lobbyId != undefined) {
+        command += clientMessage.lobbyId;
+      }
+      //send out api call
+      this.emit(command,
           this.connectionIdMap.get(connection), clientMessage.data);
     } else {
       console.log("Received malformed message, ignoring.");
@@ -196,6 +209,18 @@ export class PokerServer extends EventEmitter {
       case "get_lobbies": return message == undefined;
       case "join_lobby": return PokerServer.validateObject(plainToClass(JoinLobbyRequest, message));
       case "create_lobby": return PokerServer.validateObject(plainToClass(CreateLobbyRequest, message));
+      case "change_gamemode": return PokerServer.validateObject(plainToClass(ChangeGameModeRequest, message));
+      case "change_settings":
+        let s = plainToClass(Settings, message);
+        if (PokerServer.validateObject(s)) {
+          switch (s.gameMode) {
+            case "texasholdem":
+              return PokerServer.validateObject(plainToClass(TexasHoldEmSettings, message))
+            default:
+              return false
+          }
+        } else return false;
+      case "chat_out": return PokerServer.validateObject(plainToClass(ChatOut, message));
       default: return false;
     }
 

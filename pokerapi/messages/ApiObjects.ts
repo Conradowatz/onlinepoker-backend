@@ -1,12 +1,11 @@
 import {PokerMessage} from "./PokerMessage";
-import {Type} from "class-transformer";
+import {GameMode} from "../../src/GameMode";
 import {
+  Equals,
   IsAlphanumeric,
   IsBoolean, IsIn,
-  IsInt,
-  IsString, Length,
-  ValidateIf,
-  ValidateNested
+  IsInt, IsString,
+  Length, Min,
 } from "class-validator";
 
 export class DisconnectEvent {
@@ -18,6 +17,8 @@ export class LobbyPreview {
   id: string;
   currentPlayers: number;
   maxPlayers: number;
+  running: boolean;
+  joinable: boolean;
   gameMode: string;
   players: string[];
 }
@@ -40,8 +41,13 @@ export class Player {
   name: string;
 }
 
-export class GameMode {
-  type: string;
+export type GameModeType = "texasholdem";
+
+export class Settings extends PokerMessage {
+  @IsIn(GameMode.availableGamemodes)
+  gameMode: GameModeType;
+  @IsInt()
+  @Min(1)
   maxPlayers: number;
 }
 
@@ -51,19 +57,32 @@ export class Lobby extends PokerMessage {
   currentPlayers: number;
   currentSpectators: number;
   hidden: boolean;
-  gameMode: GameMode;
+  running: boolean;
+  joinable: boolean;
+  settings: Settings;
+  availableGamemodes: string[];
   players: Map<number, Player>; //key=Player.id
   leader: number; //Player.id
   youAreLeader: boolean;
 }
 
-export class TexasHoldEm extends GameMode {
-  //TODO add texas hold'em options
+export class TexasHoldEmSettings extends Settings {
+  @IsInt()
+  @Min(1)
+  startMoney: number;
+  @IsInt()
+  @Min(0)
+  turnTime: number;
+  @IsBoolean()
+  useSidepots: boolean;
+  @IsInt({each: true})
+  @Min(1, {each: true})
+  blinds: Map<number, number>;
 }
 
 export class JoinLobbyResponse extends PokerMessage {
   success: boolean;
-  reason?: "full" | "unknown_id" | "no_name";
+  reason?: "full" | "unknown_id" | "not_joinable";
   lobby?: Lobby;
 }
 
@@ -74,4 +93,20 @@ export class CreateLobbyRequest extends PokerMessage {
   hidden: boolean;
   @Length(1, 20)
   playerName: string;
+}
+
+export class ChangeGameModeRequest extends PokerMessage {
+  @IsIn(GameMode.availableGamemodes)
+  type: GameModeType;
+}
+
+export class ChatOut extends PokerMessage {
+  @IsString()
+  message: string;
+}
+
+export class ChatIn extends PokerMessage {
+  @IsString()
+  message: string;
+  sender: Player;
 }

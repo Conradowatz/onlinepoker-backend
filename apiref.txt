@@ -1,4 +1,12 @@
-direction, command, req_data, res_data
-=============================
-><, get_lobbies, -, LobbyList
-><
+Game:
+ >< get_lobbies
+ >< join_lobby
+ >< create_lobby
+Lobby:
+ -< lobby_update
+ >- change_gamemode
+ >- chat_out
+ -< chat_in
+GameMode:
+ >- start_game
+ >- change_settings
