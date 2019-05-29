@@ -7,6 +7,8 @@ import {Card} from "../Card";
 import {CardDeck} from "../CardDeck";
 import {Hand} from "pokersolver";
 import Timeout = NodeJS.Timeout;
+import {Player} from "../Player";
+import {Command, PokerMessage, ServerCommand} from "../../pokerapi/messages/PokerMessage";
 
 export class TexasHoldEm extends GameMode {
 
@@ -15,6 +17,8 @@ export class TexasHoldEm extends GameMode {
   running: boolean;
   //table attributes
   thPlayers: THPlayer[];
+  thPlayerMap: Map<number, number>; //key=id; value=index
+  thSpectators: Map<number, Player>;
   hand: number; //round number
   smallBlind: number; //value of the small blind, bigBlind = 2*smallBlind
   //round attributes
@@ -43,6 +47,10 @@ export class TexasHoldEm extends GameMode {
   }
 
   private registerListeners() {
+
+    api.on("drop_user", (id) => {
+
+    });
 
     api.on("start_game"+this.lobby.id, (id: number) => {
       //check for permissions
@@ -89,12 +97,17 @@ export class TexasHoldEm extends GameMode {
 
     //initialize players
     this.thPlayers = [];
+    this.thSpectators = [];
     for (let [id, player] of this.lobby.players) {
       this.thPlayers.push(new THPlayer(id, player.name, this.options.startMoney));
     }
     //initialize table
     this.hand = 0;
     this.smallBlindPlayer = this.thPlayers.length-1;
+
+    //send startGame
+    api.
+
     //start first round
     this.newRound();
   }
@@ -288,8 +301,19 @@ export class TexasHoldEm extends GameMode {
   }
 
   private removePlayer(playerIndex: number, reason: string) {
+    //add to spectators
+    this.thSpectators.push(this.lobby.players.get(this.thPlayers[playerIndex].id));
+    //remove from players
     this.thPlayers.splice(playerIndex, 1);
     //TODO notify players
+  }
+
+  private broadcastSpectators(command: Command | ServerCommand, message: PokerMessage) {
+
+    for (let spectator of this.thSpectators) {
+      api.sendMessage(spectator.id, command, message);
+    }
+    this.lobby.broadcastSpectators(command, message);
   }
 
   private endOfGame() {

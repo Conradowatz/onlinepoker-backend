@@ -29,12 +29,12 @@ export class Card {
   getSolverString():string {
     let result = "";
     switch (this.value) {
-      case 1: result+="a"; break;
-      case 10: result+="t"; break;
-      case 11: result+="j"; break;
-      case 12: result+="q"; break;
-      case 13: result+="k"; break;
-      case 14: result+="a"; break;
+      case 1: result+="A"; break;
+      case 10: result+="T"; break;
+      case 11: result+="J"; break;
+      case 12: result+="Q"; break;
+      case 13: result+="K"; break;
+      case 14: result+="A"; break;
       default: result+=this.value.toString();
     }
     switch (this.color) {

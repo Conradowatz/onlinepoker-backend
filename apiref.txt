@@ -9,5 +9,12 @@ Lobby:
  >- chat_out
  -< chat_in
 GameMode:
+ ==before playing==
  >- start_game
  >- change_settings
+ ==in game==
+ -< th_start
+ -< th_new_round
+ -< th_player_action
+ -< th_your_turn
+ >- th_action

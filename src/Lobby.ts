@@ -70,9 +70,17 @@ export class Lobby {
   }
 
   public broadcastMembers(command: Command | ServerCommand, message: PokerMessage) {
+    this.broadcastSpectators(command, message);
+    this.broadcastPlayers(command, message)
+  }
+
+  public broadcastSpectators(command: Command | ServerCommand, message: PokerMessage) {
     for (let id of this.spectators.keys()) {
       api.sendMessage(id, command, message);
     }
+  }
+
+  public broadcastPlayers(command: Command | ServerCommand, message: PokerMessage) {
     for (let id of this.players.keys()) {
       api.sendMessage(id, command, message);
     }
