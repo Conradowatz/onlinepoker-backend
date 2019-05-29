@@ -3,6 +3,6 @@ node_modules
 *.js.map
 pokerbackend.iml
 .idea
-src/*.d.ts
+src/**/*.d.ts
 pokerapi/**/*.d.ts
 App.d.ts

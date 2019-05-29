@@ -72,7 +72,7 @@ function registerListeners() {
 
 }
 
-function deleteLobby(id: string) {
+export function deleteLobby(id: string) {
   lobbies.delete(id);
 }
 

@@ -1,9 +1,9 @@
-import {api} from "./Game"
+import {api, deleteLobby} from "./Game"
 import {User} from "./User";
 import {Player} from "./Player";
 import {Spectator} from "./Spectator";
 import {GameMode} from "./GameMode";
-import {TexasHoldEm} from "./TexasHoldEm";
+import {TexasHoldEm} from "./TexasHoldEm/TexasHoldEm";
 import {
   LobbyPreview,
   Lobby as ApiLobby,
@@ -33,6 +33,18 @@ export class Lobby {
   }
 
   private registerListeners() {
+
+    api.on("drop_user", (id: number) => {
+      if (this.spectators.has(id)) {
+        this.spectators.delete(id);
+      } else if (this.players.has(id)) {
+        this.dropPlayer(id);
+      }
+    });
+
+    api.on("leave_lobby"+this.id, (id) => {
+      this.dropPlayer(id);
+    });
 
     api.on("change_gamemode"+this.id, (id: number, req: ChangeGameModeRequest) => {
       //check for permissions
@@ -75,6 +87,19 @@ export class Lobby {
       apiLobby.youAreLeader = id == this.leader.id;
       api.sendMessage(id, "lobby_update", apiLobby);
     }
+  }
+
+  private dropPlayer(id: number) {
+    this.players.delete(id);
+    if (this.players.size == 0) {
+      deleteLobby(this.id);
+      return;
+    }
+    if (this.leader.id == id) {
+      //set new leader
+      this.leader.id = this.players.keys().next().value;
+    }
+    this.sendLobbyUpdate();
   }
 
 

@@ -14,8 +14,9 @@ export type Command =
 export type ClientCommand =
   "change_settings"
   | "change_gamemode"
-  | "change_settings"
+  | "start_game"
   | "chat_out"
+  | "leave_lobby"
   ;
 
 export type ServerCommand =
@@ -40,12 +41,14 @@ let clientCommands = [
   "change_settings",
   "change_gamemode",
   "start_game",
-  "chat_out"
+  "chat_out",
+  "leave_lobby"
 ];
 
 let commandsWithoutData = [
   "get_lobbies",
-  "start_game"
+  "start_game",
+  "leave_lobby"
 ];
 
 export class ServerMessage {

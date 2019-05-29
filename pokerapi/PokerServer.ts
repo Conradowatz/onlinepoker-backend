@@ -206,7 +206,10 @@ export class PokerServer extends EventEmitter {
 
   private static validateMessage(command: Command | ClientCommand, message: PokerMessage.PokerMessage):boolean {
     switch (command) {
-      case "get_lobbies": return message == undefined;
+      case "get_lobbies":
+      case "start_game":
+      case "leave_lobby":
+        return message == undefined;
       case "join_lobby": return PokerServer.validateObject(plainToClass(JoinLobbyRequest, message));
       case "create_lobby": return PokerServer.validateObject(plainToClass(CreateLobbyRequest, message));
       case "change_gamemode": return PokerServer.validateObject(plainToClass(ChangeGameModeRequest, message));
