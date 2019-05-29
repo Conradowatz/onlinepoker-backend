@@ -5,6 +5,8 @@ import {api} from "../Game";
 import {THPlayer} from "./THPlayer";
 import {Card} from "../Card";
 import {CardDeck} from "../CardDeck";
+import {Hand} from "pokersolver";
+import Timeout = NodeJS.Timeout;
 
 export class TexasHoldEm extends GameMode {
 
@@ -23,6 +25,7 @@ export class TexasHoldEm extends GameMode {
   highestBet: number;
   smallBlindPlayer: number; //which player has the small blind, big is next
   playersToAsk: number; //the amount of players that can still take action
+  turnTimer: Timeout;
 
   constructor(public lobby: Lobby) {
     super();
@@ -79,7 +82,13 @@ export class TexasHoldEm extends GameMode {
   }
 
   startGame(): void {
+
+    //set running status
+    this.running = true;
+    this.lobby.sendLobbyUpdate();
+
     //initialize players
+    this.thPlayers = [];
     for (let [id, player] of this.lobby.players) {
       this.thPlayers.push(new THPlayer(id, player.name, this.options.startMoney));
     }
@@ -144,6 +153,14 @@ export class TexasHoldEm extends GameMode {
     //set options
     this.setPlayerOptions(player);
     //TODO send options
+
+    //set timeout
+    if (this.options.turnTime>0) {
+      this.turnTimer = setTimeout(() => {
+        //fold if waiting time is too long
+        this.playerAction(THPlayer.OPTION_FOLD);
+      }, this.options.turnTime*1000)
+    }
 
   }
 
@@ -224,8 +241,60 @@ export class TexasHoldEm extends GameMode {
 
   private endRound() {
 
-    //
+    //determine winner
+    let hands = [];
+    let communityCardsString = [];
+    for (let card of this.communityCards) {
+      communityCardsString.push(card.getSolverString());
+    }
+    for (let i=0; i<this.thPlayers.length; i++) {
+      if (!this.thPlayers[i].folded) {
+        let cardStrings = [];
+        cardStrings.concat(communityCardsString);
+        cardStrings.push(this.thPlayers[i].cards[0], this.thPlayers[i].cards[1]);
+        let hand = Hand.solve(cardStrings, "standard", false);
+        hands.push(hand);
+      }
+    }
+    let winnerHands = Hand.winners(hands);
+    let winningPlayers = [];
+    for (let wh of winnerHands) {
+      winningPlayers.push(hands.indexOf(wh));
+    }
 
+    //give winners their money
+    for (let i of winningPlayers) {
+      this.thPlayers[i].money += Math.floor(this.pot/winningPlayers.length);
+    }
+    //TODO notify end
+
+    //determine players with no money left
+    for (let i=0; i<this.thPlayers.length; i++) {
+      if (this.thPlayers[i].money==0) {
+        this.removePlayer(i, "lost");
+        i--;
+      }
+    }
+
+    setTimeout(() => {
+      //check if only one player is left
+      if (this.thPlayers.length==1) {
+        this.endOfGame();
+      } else {
+        this.newRound();
+      }
+    }, 10*1000);
+
+  }
+
+  private removePlayer(playerIndex: number, reason: string) {
+    this.thPlayers.splice(playerIndex, 1);
+    //TODO notify players
+  }
+
+  private endOfGame() {
+    //TODO send endOfGame
+    this.running = false;
   }
 
   private setBlinds() {
