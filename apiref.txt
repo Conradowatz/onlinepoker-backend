@@ -1,23 +1,23 @@
 Game:
- >< get_lobbies
- >< join_lobby
- >< create_lobby
- >- leave_lobby
+ >< get_lobbies():GetLobbiesResponse
+ >< join_lobby(JoinLobbyRequest):JoinLobbyResponse
+ >< create_lobby(CreateLobbyRequest):Lobby
+ >- leave_lobby()
 Lobby:
- -< lobby_update
- >- change_gamemode
- >- chat_out
- -< chat_in
+ -< lobby_update:Lobby
+ >- change_gamemode()
+ >- chat_out(ChatOut)
+ -< chat_in:ChatIn
 GameMode:
  ==before playing==
- >- start_game
- >- change_settings
- ==in game==
- -< th_start (Spieler, Settings)
- -< th_new_round (Spieler, meine Karten, blinds, hand, blindPlayer)
- -< th_player_action (turn/bet/fold/.../leave)
- -< th_your_turn (Options, timeout)
- >- th_action (bet/fold/leave/...)
- -< th_community_card (Card[])
- -< th_end_round (winners, winning cards, Spieler mit Karten)
- -< th_end_game (winner)
+ >- start_game()
+ >- change_settings(Settings)
+ ==in game (TH)==
+ -< th_start:THStartGame
+ -< th_new_round:THNewRound
+ -< th_player_action:THPlayerAction
+ -< th_your_turn:THYourTurn
+ >- th_action(THAction)
+ -< th_community_card:THCommunityCard
+ -< th_end_round:THEndRound
+ -< th_end_game:THPlayer

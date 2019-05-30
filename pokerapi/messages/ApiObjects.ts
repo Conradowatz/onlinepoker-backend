@@ -110,8 +110,8 @@ export class THNewRound extends PokerMessage {
 
 export class THPlayerAction extends PokerMessage {
   player: THPlayer;
-  action: "call" | "fold" | "check" | "raise" | "allin" | "giveup";
-  value?: string;
+  action: "call" | "fold" | "check" | "raise" | "allin" | "giveup" | "turn";
+  value?: string | number | Player;
 }
 
 export class THYourTurn extends PokerMessage {
@@ -128,7 +128,12 @@ export class THAction extends PokerMessage {
   value?: number;
 }
 
+export class THCommunityCard extends PokerMessage {
+  communityCards: Card[];
+}
+
 export class THEndRound extends PokerMessage {
+  reason: string;
   winners: THPlayer[];
   winningCards: Card[];
   players: THPlayer[];

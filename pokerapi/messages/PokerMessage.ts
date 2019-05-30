@@ -17,12 +17,14 @@ export type ClientCommand =
   | "start_game"
   | "chat_out"
   | "leave_lobby"
+  | "th_action"
   ;
 
 export type ServerCommand =
   "disconnect"
   | "lobby_update"
   | "chat_in"
+  | "th_start" | "th_new_round" | "th_player_action" | "th_your_turn" | "th_community_card" | "th_end_round" | "th_end_game"
   ;
 
 let commands = [
@@ -31,18 +33,13 @@ let commands = [
   "create_lobby",
 ];
 
-let serverCommands = [
-  "disconnect",
-  "lobby_update",
-  "chat_in"
-];
-
 let clientCommands = [
   "change_settings",
   "change_gamemode",
   "start_game",
   "chat_out",
-  "leave_lobby"
+  "leave_lobby",
+  "th_action"
 ];
 
 let commandsWithoutData = [
@@ -52,11 +49,7 @@ let commandsWithoutData = [
 ];
 
 export class ServerMessage {
-  @IsIn(commands.concat(serverCommands))
   command: Command | ServerCommand;
-  @ValidateIf(o => !commandsWithoutData.includes(o.command))
-  @IsDefined()
-  @Type(() => PokerMessage)
   data: PokerMessage;
 }
 

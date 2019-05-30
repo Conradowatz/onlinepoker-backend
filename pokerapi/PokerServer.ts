@@ -16,7 +16,7 @@ import {
   ChangeGameModeRequest, ChatOut,
   CreateLobbyRequest,
   JoinLobbyRequest,
-  Settings,
+  Settings, THAction,
   THSettings
 } from "./messages/ApiObjects";
 
@@ -259,6 +259,7 @@ export class PokerServer extends EventEmitter {
           }
         } else return false;
       case "chat_out": return PokerServer.validateObject(plainToClass(ChatOut, message));
+      case "th_action": return PokerServer.validateObject(plainToClass(THAction, message));
       default: return false;
     }
 

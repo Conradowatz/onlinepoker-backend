@@ -1,5 +1,6 @@
 import {Player} from "../Player";
 import {Card} from "../Card";
+import {THPlayer as ApiTHPlayer} from "../../pokerapi/messages/ApiObjects";
 
 export class THPlayer extends Player {
 
@@ -26,4 +27,17 @@ export class THPlayer extends Player {
   public static OPTION_FOLD = "fold";
 
   public static ALL_OPTIONS = [THPlayer.OPTION_CHECK, THPlayer.OPTION_RAISE, THPlayer.OPTION_CALL, THPlayer.OPTION_ALLIN, THPlayer.OPTION_FOLD];
+
+  apiTHPlayer(showCards: boolean): ApiTHPlayer {
+    let cards = this.cards.map((c) => c.apiCard());
+    return {
+      id: this.id,
+      name: this.name,
+      cards: showCards?cards:[],
+      money: this.money,
+      bet: this.bet,
+      allIn: this.allIn,
+      folded: this.folded
+    };
+  }
 }

@@ -48,6 +48,26 @@ export class Card {
     return result;
   }
 
+  static fromString(string: string):Card {
+    let card = new Card(0, 0);
+    let colorPart = string.slice(-1);
+    let valuePart = string.slice(0, -1);
+    switch (colorPart) {
+      case "h": card.color = 0; break;
+      case "d": card.color = 1; break;
+      case "c": card.color = 2; break;
+      case "s": card.color = 3;
+    }
+    switch (valuePart) {
+      case "J": card.value = 11; break;
+      case "Q": card.value = 12; break;
+      case "K": card.value = 13; break;
+      case "A": card.value = 14; break;
+      default: card.value = parseInt(valuePart);
+    }
+    return card;
+  }
+
   apiCard():ApiCard {
     return {
       value: this.getValueName(),
