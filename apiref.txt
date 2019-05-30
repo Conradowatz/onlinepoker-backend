@@ -13,8 +13,11 @@ GameMode:
  >- start_game
  >- change_settings
  ==in game==
- -< th_start
- -< th_new_round
- -< th_player_action
- -< th_your_turn
- >- th_action
+ -< th_start (Spieler, Settings)
+ -< th_new_round (Spieler, meine Karten, blinds, hand, blindPlayer)
+ -< th_player_action (turn/bet/fold/.../leave)
+ -< th_your_turn (Options, timeout)
+ >- th_action (bet/fold/leave/...)
+ -< th_community_card (Card[])
+ -< th_end_round (winners, winning cards, Spieler mit Karten)
+ -< th_end_game (winner)

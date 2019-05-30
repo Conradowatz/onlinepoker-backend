@@ -17,7 +17,7 @@ import {
   CreateLobbyRequest,
   JoinLobbyRequest,
   Settings,
-  TexasHoldEmSettings
+  THSettings
 } from "./messages/ApiObjects";
 
 export class PokerServer extends EventEmitter {
@@ -253,7 +253,7 @@ export class PokerServer extends EventEmitter {
         if (PokerServer.validateObject(s)) {
           switch (s.gameMode) {
             case "texasholdem":
-              return PokerServer.validateObject(plainToClass(TexasHoldEmSettings, message))
+              return PokerServer.validateObject(plainToClass(THSettings, message))
             default:
               return false
           }

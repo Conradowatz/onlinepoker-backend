@@ -4,7 +4,7 @@ import {
   Equals,
   IsAlphanumeric,
   IsBoolean, IsIn,
-  IsInt, IsString,
+  IsInt, IsOptional, IsString,
   Length, Min,
 } from "class-validator";
 
@@ -66,7 +66,12 @@ export class Lobby extends PokerMessage {
   youAreLeader: boolean;
 }
 
-export class TexasHoldEmSettings extends Settings {
+export class Card extends PokerMessage {
+  color: string;
+  value: string;
+}
+
+export class THSettings extends Settings {
   @IsInt()
   @Min(1)
   startMoney: number;
@@ -78,6 +83,55 @@ export class TexasHoldEmSettings extends Settings {
   @IsInt({each: true})
   @Min(1, {each: true})
   blinds: Map<number, number>;
+}
+
+export class THPlayer extends Player {
+  cards: Card[];
+  money: number;
+  bet: number;
+  allIn: boolean;
+  folded: boolean;
+}
+
+export class THStartGame extends PokerMessage {
+  players: THPlayer[];
+  settings: THSettings
+}
+
+export class THNewRound extends PokerMessage {
+  players: THPlayer[];
+  yourCards: Card[];
+  hand: number;
+  smallBlind: number;
+  bigBlind: number;
+  smallBlindPlayer: number;
+  bigBlindPlayer: number;
+}
+
+export class THPlayerAction extends PokerMessage {
+  player: THPlayer;
+  action: "call" | "fold" | "check" | "raise" | "allin" | "giveup";
+  value?: string;
+}
+
+export class THYourTurn extends PokerMessage {
+  options: string[];
+  timeout: number;
+}
+
+export class THAction extends PokerMessage {
+  @IsString()
+  @IsIn(["call", "fold", "check", "raise", "allin", "giveup"])
+  action: "call" | "fold" | "check" | "raise" | "allin" | "giveup";
+  @IsOptional()
+  @IsInt()
+  value?: number;
+}
+
+export class THEndRound extends PokerMessage {
+  winners: THPlayer[];
+  winningCards: Card[];
+  players: THPlayer[];
 }
 
 export class JoinLobbyResponse extends PokerMessage {

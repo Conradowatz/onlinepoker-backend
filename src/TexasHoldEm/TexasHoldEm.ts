@@ -1,5 +1,5 @@
 import {GameMode} from "../GameMode";
-import {TexasHoldEmSettings} from "../../pokerapi/messages/ApiObjects";
+import {THSettings} from "../../pokerapi/messages/ApiObjects";
 import {Lobby} from "../Lobby";
 import {api} from "../Game";
 import {THPlayer} from "./THPlayer";
@@ -58,7 +58,7 @@ export class TexasHoldEm extends GameMode {
       this.startGame();
     });
 
-    api.onLobby(this.lobby.id, "change_settings", (id: number, req: TexasHoldEmSettings) => {
+    api.onLobby(this.lobby.id, "change_settings", (id: number, req: THSettings) => {
       //check for permissions
       if (id != this.lobby.leader.id || this.running) return;
       //change to desired options
@@ -353,7 +353,7 @@ export class TexasHoldEm extends GameMode {
     if (player.bet>this.highestBet) this.highestBet = player.bet;
   }
 
-  apiSettings(): TexasHoldEmSettings {
+  apiSettings(): THSettings {
     return {
       gameMode: "texasholdem",
       maxPlayers: this.getMaxPlayers(),

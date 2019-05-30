@@ -1,3 +1,5 @@
+import {Card as ApiCard} from "../pokerapi/messages/ApiObjects";
+
 export class Card {
 
   highlighted = false;
@@ -44,5 +46,12 @@ export class Card {
       case 3: result+="s";
     }
     return result;
+  }
+
+  apiCard():ApiCard {
+    return {
+      value: this.getValueName(),
+      color: this.getColorName()
+    }
   }
 }
