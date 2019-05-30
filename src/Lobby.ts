@@ -11,16 +11,18 @@ import {
   ChangeGameModeRequest, ChatOut, ChatIn
 } from "../pokerapi/messages/ApiObjects";
 import {Command, PokerMessage, ServerCommand} from "../pokerapi/messages/PokerMessage";
+import {EventEmitter} from "events";
 
-export class Lobby {
+export class Lobby extends EventEmitter {
 
   players = new Map<number, Player>();
   spectators = new Map<number, Spectator>();
   gameMode: GameMode;
 
   constructor(public id:string, public leader: User, public name: string, public hidden: boolean) {
-    this.gameMode = new TexasHoldEm(this);
+    super();
 
+    this.gameMode = new TexasHoldEm(this);
     this.registerListeners();
   }
 
@@ -34,7 +36,7 @@ export class Lobby {
 
   private registerListeners() {
 
-    api.on("drop_user", (id: number) => {
+    api.onLobby(this.id, "drop_user", (id: number) => {
       if (this.spectators.has(id)) {
         this.spectators.delete(id);
       } else if (this.players.has(id)) {
@@ -42,11 +44,11 @@ export class Lobby {
       }
     });
 
-    api.on("leave_lobby"+this.id, (id) => {
+    api.onLobby(this.id, "leave_lobby", (id) => {
       this.dropPlayer(id);
     });
 
-    api.on("change_gamemode"+this.id, (id: number, req: ChangeGameModeRequest) => {
+    api.onLobby(this.id,"change_gamemode", (id: number, req: ChangeGameModeRequest) => {
       //check for permissions
       if (id != this.leader.id) return;
 
@@ -57,7 +59,7 @@ export class Lobby {
       this.sendLobbyUpdate();
     });
 
-    api.on("chat_out"+this.id, (id, req: ChatOut) => {
+    api.onLobby(this.id, "chat_out", (id, req: ChatOut) => {
       //check for permission (only players can chat)
       if (!this.players.has(id)) return;
 
@@ -99,6 +101,7 @@ export class Lobby {
 
   private dropPlayer(id: number) {
     this.players.delete(id);
+    api.removePlayerFromLobby(this.id, id);
     if (this.players.size == 0) {
       deleteLobby(this.id);
       return;

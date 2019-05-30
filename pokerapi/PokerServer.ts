@@ -28,6 +28,8 @@ export class PokerServer extends EventEmitter {
   wsServer: WebSocketServer;
   idConnectionMap = new Map<number, connection>();
   connectionIdMap = new Map<connection, number>();
+  playerLobbyMap = new Map<number, string>();
+  lobbyEmitterMap = new Map<string, EventEmitter>();
 
   constructor(public port: number, public maxConnections = 1000) {
     super();
@@ -135,25 +137,58 @@ export class PokerServer extends EventEmitter {
     if (PokerServer.validateObject(clientMessage)
         && PokerServer.validateMessage(clientMessage.command, clientMessage.data)) {
 
-      //append lobbyId to command if available
-      let command = clientMessage.command;
-      if (clientMessage.lobbyId != undefined) {
-        command += clientMessage.lobbyId;
-      }
-      //send out api call
-      this.emit(command,
-          this.connectionIdMap.get(connection), clientMessage.data);
+      let playerId = this.connectionIdMap.get(connection);
+      //send out global api call
+      this.emit(clientMessage.command, playerId, clientMessage.data);
+      //send out lobby calls
+      this.emitLobby(clientMessage.command, playerId, clientMessage.data);
+
     } else {
       console.log("Received malformed message, ignoring.");
     }
   }
 
+  private emitLobby(command: Command | ClientCommand | "drop_user", playerId: number, message?: PokerMessage.PokerMessage) {
+    let lobbyId = this.playerLobbyMap.get(playerId);
+    if (lobbyId != undefined) {
+      let emitter = this.lobbyEmitterMap.get(lobbyId);
+      if (emitter != undefined) {
+        emitter.emit(command, playerId, message);
+      }
+    }
+  }
+
+  public moveUserToLobby(playerId: number, lobbyId: string) {
+    this.playerLobbyMap.set(playerId, lobbyId);
+  }
+
+  public onLobby(lobbyId: string, command: Command | ClientCommand | "drop_user", callback: (id: number, message?: PokerMessage.PokerMessage) => void) {
+    let emitter = this.lobbyEmitterMap.get(lobbyId);
+    if (emitter == undefined) {
+      emitter = new EventEmitter();
+      this.lobbyEmitterMap.set(lobbyId, emitter);
+    }
+    emitter.on(command, callback);
+  }
+
+  public unregisterLobby(lobbyId: string) {
+    this.lobbyEmitterMap.delete(lobbyId);
+  }
+
+  public removePlayerFromLobby(lobbyId: string, playerId: number) {
+    this.playerLobbyMap.delete(playerId);
+  }
+
   private onClose(connection: connection, reasonCode: number, description: string) {
     //get user id
     let id = this.connectionIdMap.get(connection);
+    //emit global event
     this.emit("drop_user", id);
+    //emit lobby event
+    this.emitLobby("drop_user", id);
     this.connectionIdMap.delete(connection);
     this.idConnectionMap.delete(id);
+    this.playerLobbyMap.delete(id);
 
     console.log("User disconnected. Code: " + reasonCode + " Desc: " + description);
   }

@@ -49,6 +49,7 @@ function registerListeners() {
         response.reason = "not_joinable";
       } else {
         //perform join
+        api.moveUserToLobby(id, lobby.id);
         if (req.spectate) {
           lobby.spectate(id);
         } else {
@@ -65,6 +66,7 @@ function registerListeners() {
 
   api.on("create_lobby", (id, req: CreateLobbyRequest) => {
     let lobby = new Lobby(getRandomLobbyId(), {id: id}, req.name, req.hidden);
+    api.moveUserToLobby(id, lobby.id);
     lobby.join(id, req.playerName);
     lobbies.set(lobby.id, lobby);
     api.sendMessage(id, "create_lobby", lobby.apiLobby(id));
@@ -74,6 +76,7 @@ function registerListeners() {
 
 export function deleteLobby(id: string) {
   lobbies.delete(id);
+  api.unregisterLobby(id);
 }
 
 function getRandomLobbyId():string {

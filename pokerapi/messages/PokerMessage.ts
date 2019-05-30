@@ -63,9 +63,6 @@ export class ServerMessage {
 export class ClientMessage {
   @IsIn(commands.concat(clientCommands))
   command: Command | ClientCommand;
-  @IsOptional()
-  @IsAlphanumeric()
-  lobbyId?: string;
   @ValidateIf(o => !commandsWithoutData.includes(o.command))
   @IsDefined()
   @Type(() => PokerMessage)

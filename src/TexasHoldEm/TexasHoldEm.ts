@@ -17,7 +17,6 @@ export class TexasHoldEm extends GameMode {
   running: boolean;
   //table attributes
   thPlayers: THPlayer[];
-  thPlayerMap: Map<number, number>; //key=id; value=index
   thSpectators: Map<number, Player>;
   hand: number; //round number
   smallBlind: number; //value of the small blind, bigBlind = 2*smallBlind
@@ -48,18 +47,18 @@ export class TexasHoldEm extends GameMode {
 
   private registerListeners() {
 
-    api.on("drop_user", (id) => {
+    api.onLobby(this.lobby.id, "drop_user", (id) => {
 
     });
 
-    api.on("start_game"+this.lobby.id, (id: number) => {
+    api.onLobby(this.lobby.id, "start_game", (id: number) => {
       //check for permissions
       if (id != this.lobby.leader.id || this.running) return;
 
       this.startGame();
     });
 
-    api.on("change_settings", (id: number, req: TexasHoldEmSettings) => {
+    api.onLobby(this.lobby.id, "change_settings", (id: number, req: TexasHoldEmSettings) => {
       //check for permissions
       if (id != this.lobby.leader.id || this.running) return;
       //change to desired options
@@ -97,7 +96,7 @@ export class TexasHoldEm extends GameMode {
 
     //initialize players
     this.thPlayers = [];
-    this.thSpectators = [];
+    this.thSpectators = new Map<number, Player>();
     for (let [id, player] of this.lobby.players) {
       this.thPlayers.push(new THPlayer(id, player.name, this.options.startMoney));
     }
@@ -106,7 +105,7 @@ export class TexasHoldEm extends GameMode {
     this.smallBlindPlayer = this.thPlayers.length-1;
 
     //send startGame
-    api.
+    //TODO
 
     //start first round
     this.newRound();
@@ -302,7 +301,8 @@ export class TexasHoldEm extends GameMode {
 
   private removePlayer(playerIndex: number, reason: string) {
     //add to spectators
-    this.thSpectators.push(this.lobby.players.get(this.thPlayers[playerIndex].id));
+    let thPlayer = this.thPlayers[playerIndex];
+    this.thSpectators.set(thPlayer.id, this.lobby.players.get(thPlayer.id));
     //remove from players
     this.thPlayers.splice(playerIndex, 1);
     //TODO notify players
@@ -310,8 +310,8 @@ export class TexasHoldEm extends GameMode {
 
   private broadcastSpectators(command: Command | ServerCommand, message: PokerMessage) {
 
-    for (let spectator of this.thSpectators) {
-      api.sendMessage(spectator.id, command, message);
+    for (let [id, spectator] of this.thSpectators) {
+      api.sendMessage(id, command, message);
     }
     this.lobby.broadcastSpectators(command, message);
   }
