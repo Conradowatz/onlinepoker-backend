@@ -165,7 +165,6 @@ export class ChatOut extends PokerMessage {
 }
 
 export class ChatIn extends PokerMessage {
-  @IsString()
   message: string;
   sender: Player;
 }

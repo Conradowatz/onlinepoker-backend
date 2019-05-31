@@ -3,9 +3,10 @@ Game:
  >< join_lobby(JoinLobbyRequest):JoinLobbyResponse
  >< create_lobby(CreateLobbyRequest):Lobby
  >- leave_lobby()
+ -< disconnect:DisconnectEvent
 Lobby:
  -< lobby_update:Lobby
- >- change_gamemode()
+ >- change_gamemode(ChangeGameModeRequest)
  >- chat_out(ChatOut)
  -< chat_in:ChatIn
 GameMode:
