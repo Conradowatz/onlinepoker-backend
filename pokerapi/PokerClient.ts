@@ -27,6 +27,7 @@ export class PokerClient extends EventEmitter {
     this.wsClient.on("connect", (connection) => {
 
       this.connection = connection;
+      this.emit("ready");
 
       //pipe incoming messages trough
       connection.on("message", (data) => {
@@ -47,14 +48,14 @@ export class PokerClient extends EventEmitter {
     });
 
     this.wsClient.on("connectFailed", (err) => {
-      this.emit("connect_failed", err);
+      this.emit("failed", err);
       if (this.autoReconnect) {
         setTimeout(() => this.wsClient.connect(this.address, "poker1"), 3000);
       }
     });
   }
 
-  public sendMessage(command: ClientCommand | Command, message: PokerMessage) {
+  public sendMessage(command: ClientCommand | Command, message?: PokerMessage) {
 
     let cm:ClientMessage = {
       command: command,
@@ -63,10 +64,10 @@ export class PokerClient extends EventEmitter {
     this.connection.sendUTF(serialize(cm));
   }
 
-  public sendMessageCall(command: ClientCommand | Command, message: PokerMessage, callback: (message?: PokerMessage) => void) {
+  public sendMessageCall(command: ClientCommand | Command, callback: (message?: PokerMessage) => void, message?: PokerMessage) {
     this.sendMessage(command, message);
-    this.once(command, (message: PokerMessage) => {
-      callback(message);
+    this.once(command, (response: PokerMessage) => {
+      callback(response);
     })
   }
 }
