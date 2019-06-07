@@ -4,14 +4,14 @@ import {
   THNewRound,
   THPlayerAction,
   THSettings,
-  THStartGame, THYourTurn, Card as ApiCard
+  THStartGame, THYourTurn,
 } from "../../pokerapi/messages/ApiObjects";
 import {Lobby} from "../Lobby";
 import {api} from "../Game";
 import {THPlayer} from "./THPlayer";
 import {Card} from "../Card";
 import {CardDeck} from "../CardDeck";
-import {CardString, Hand} from "pokersolver";
+import {Hand} from "pokersolver";
 import Timeout = NodeJS.Timeout;
 import {Player} from "../Player";
 import {Command, PokerMessage, ServerCommand} from "../../pokerapi/messages/PokerMessage";
@@ -54,15 +54,19 @@ export class TexasHoldEm extends GameMode {
   private registerListeners() {
 
     api.onLobby(this.lobby.id, "drop_user", (id) => {
-      let spec = this.thSpectators.get(id);
-      if (spec != undefined) {
-        this.thSpectators.delete(id);
-        return;
-      }
-      for (let i=0; i<this.thPlayers.length; i++) {
-        if (this.thPlayers[i].id == id) {
-          this.removePlayer(i, "disconnected");
+      if (this.thSpectators !== undefined) {
+        let spec = this.thSpectators.get(id);
+        if (spec != undefined) {
+          this.thSpectators.delete(id);
           return;
+        }
+      }
+      if (this.thPlayers !== undefined) {
+        for (let i = 0; i < this.thPlayers.length; i++) {
+          if (this.thPlayers[i].id == id) {
+            this.removePlayer(i, "disconnected");
+            return;
+          }
         }
       }
     });
@@ -88,6 +92,7 @@ export class TexasHoldEm extends GameMode {
     });
 
     api.onLobby(this.lobby.id, "th_action", (id, message: THAction) => {
+      if (!this.running) return;
       let playerIndex;
       for (let i=0; i<this.thPlayers.length; i++) {
         if (this.thPlayers[i].id == id) {

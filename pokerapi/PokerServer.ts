@@ -46,7 +46,7 @@ export class PokerServer extends EventEmitter {
       httpServer: this.httpServer,
       autoAcceptConnections: false
     });
-    this.wsServer.on("request", (request => this.onRequest(request)))
+    this.wsServer.on("request", (request => this.onRequest(request)));
   }
 
   /**
@@ -73,11 +73,11 @@ export class PokerServer extends EventEmitter {
     //accept with protocol number
     if (!request.requestedProtocols.includes(PokerServer.protocol)) {
       request.reject();
-      console.log('Connection with unknown protocol rejected.');
+      console.log('Connection with unknown protocol rejected: ' + request.requestedProtocols);
       return;
     }
     let connection = request.accept(PokerServer.protocol, request.origin);
-    console.log((new Date()) + ' New connection accepted from: ' + connection.socket.localAddress);
+    console.log(' New connection accepted from: ' + connection.socket.localAddress);
     this.onNewConnection(connection);
 
     //listen to incoming messages

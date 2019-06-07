@@ -26,7 +26,6 @@ function registerListeners() {
 
     let response = new GetLobbiesResponse();
     response.lobbies = new Array<LobbyPreview>();
-    console.log(lobbies);
     for (let [lid, lobby] of lobbies) {
       if (!lobby.hidden) response.lobbies.push(lobby.apiLobbyPreview());
     }
