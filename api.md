@@ -173,8 +173,8 @@ uses: [Player](#Player)
   joinable: boolean, //if the lobby can be joined
   settings: Settings, //currently selected settings
   players: Map<number, Player, //key=Player.id
-  leader: number, //Player.id
-  youAreLeader: boolean //whether or not you are leader and can edit lobby options
+  leader: number, //Player.id of the player who can edit the settings
+  yourId: boolean //your id
 }
 ```
 uses: [Player](#Player), [Settings](#Settings)

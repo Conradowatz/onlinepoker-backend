@@ -94,7 +94,7 @@ export class Lobby extends EventEmitter {
       api.sendMessage(id, "lobby_update", apiLobby);
     }
     for (let id of this.players.keys()) {
-      apiLobby.youAreLeader = id == this.leader.id;
+      apiLobby.yourId = id;
       api.sendMessage(id, "lobby_update", apiLobby);
     }
   }
@@ -148,7 +148,7 @@ export class Lobby extends EventEmitter {
       availableGamemodes: GameMode.availableGamemodes,
       players: playerMap,
       leader: this.leader.id,
-      youAreLeader: id == this.leader.id
+      yourId: id
     }
   }
 }
