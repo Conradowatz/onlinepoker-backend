@@ -1,4 +1,4 @@
-node_modules
+node_modules/*
 *.js
 *.js.map
 pokerbackend.iml
@@ -6,3 +6,6 @@ pokerbackend.iml
 src/**/*.d.ts
 pokerapi/**/*.d.ts
 App.d.ts
+!node_modules/@types
+node_modules/@types/*
+!node_modules/@types/pokersolver
