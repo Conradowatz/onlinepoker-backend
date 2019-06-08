@@ -19,17 +19,16 @@ function startMyClientCalls() {
 The PokerClient can emit the following meta-events:
 
 | Event  | Description | Arguments |
-|----------------------------------|
+|--------|-------------|-----------|
 | ready  | Connection to the server got established. | - |
 | error  | There was an error during the connection. | [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) |
 | close  | The connection got closed. | - |
-| failed | Connecting to the server failed. | [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) |
 
-Apart from those meta-events it can also emit poker related commands. See [Server Events](#Server-Events).
+Apart from those meta-events it can also emit poker related commands. See [Server Events](#server-events).
 
 You can of course also send poker commands to the server. There are two types:
-* [Callback Messages](#Callback-Messages): those are commands consisting of a request and a response
-* [One-Way Messages](#One-Way-Messages): those are commands that do not deliver a response, but will trigger an action on the server which might lead to another [event](#Server-Events)
+* [Callback Messages](#callback-messages): those are commands consisting of a request and a response
+* [One-Way Messages](#one-way-messages): those are commands that do not deliver a response, but will trigger an action on the server which might lead to another [event](#server-events)
 
 ## Callback Messages
 These are function-like calls that you can send to the server with a single object argument, and get a single object in return.
@@ -52,7 +51,7 @@ Returns a list of all visible lobbies.
     lobbies: LobbyPreview[]
 }
 ```
-uses: [LobbyPreview](#LobbyPreview)
+uses: [LobbyPreview](#lobbypreview)
 
 ##### join_lobby(JoinLobbyRequest):JoinLobbyResponse
 Tries to join a lobby.
@@ -72,9 +71,9 @@ Tries to join a lobby.
   lobby?: Lobby //if success
 }
 ```
-uses: [Lobby](#Lobby)
+uses: [Lobby](#lobby)
 
-##### create_lobby(CreateLobbyRequest):[Lobby](#Lobby)
+##### create_lobby(CreateLobbyRequest):[Lobby](#lobby)
 Create a new lobby, with yourself as leader.
 ###### CreateLobbyRequest
 ```typescript
@@ -99,8 +98,8 @@ If you are leader of a lobby, you can change its game mode. Will trigger a lobby
   type: GameModeType; //string with the correct game mode
 }
 ```
-uses: [GameModeType](#GameModeType)
-see: [Game Modes](#Game-Modes)
+uses: [GameModeType](#gamemodetype)
+see: [Game Modes](#game-modes)
 
 ##### chat_out(ChatOut)
 Send a chat message to all players of your current lobby.
@@ -114,13 +113,13 @@ Send a chat message to all players of your current lobby.
 ##### start_game()
 If you are the leader of a lobby, you can start the game.
 
-##### change_settings([Settings](#Settings))
+##### change_settings([Settings](#settings))
 If you are the leader of a lobby, you can change game mode specific options here.
 
 Warning: You can not change the game mode itself this way! Use chnage_gamemode instead.
 
 ## Server Events
-These are messages, the server sends to you, because you are in a certain state of the game, or because you sent a [One-Way Message](#One-Way-Messages)
+These are messages, the server sends to you, because you are in a certain state of the game, or because you sent a [One-Way Message](#one-way-messages)
 
 ##### disconnect:DisconnectEvent
 The server let's you know upfront that it is closing your connection.
@@ -131,7 +130,7 @@ The server let's you know upfront that it is closing your connection.
 }
 ```
 
-##### lobby_update:[Lobby](#Lobby)
+##### lobby_update:[Lobby](#lobby)
 Notifies you that an attribute of your current lobby changed.
 
 ##### chat_in:ChatIn
@@ -143,7 +142,7 @@ Notifies you about an incoming chat message.
   sender: Player;
 }
 ```
-uses: [Player](#Player)
+uses: [Player](#player)
 
 ## Api Objects
 
@@ -172,12 +171,12 @@ uses: [Player](#Player)
   running: boolean, //if a game is currently running
   joinable: boolean, //if the lobby can be joined
   settings: Settings, //currently selected settings
-  players: Map<number, Player, //key=Player.id
+  players: Record<number, Player, //key=Player.id
   leader: number, //Player.id of the player who can edit the settings
   yourId: boolean //your id
 }
 ```
-uses: [Player](#Player), [Settings](#Settings)
+uses: [Player](#player), [Settings](#settings)
 
 ##### Player
 ```typescript
@@ -188,7 +187,7 @@ uses: [Player](#Player), [Settings](#Settings)
 ```
 
 ##### Settings
-Abstract class only describing the type of game mode. Please cast respectively. See [Game Modes](#Game-Modes)
+Abstract class only describing the type of game mode. Please cast respectively. See [Game Modes](#game-modes)
 ```typescript
 {
   type: GameModeType,
@@ -230,7 +229,7 @@ Notifies you that the game has started.
   settings: THSettings
 }
 ```
-uses: [THPlayer](#THPlayer), [THSettings](#THSettings)
+uses: [THPlayer](#thplayer), [THSettings](#thsettings)
 
 ##### th_new_round:THNewRound
 Notifies you that a new round/hand has started.
@@ -246,7 +245,7 @@ Notifies you that a new round/hand has started.
   bigBlindPlayer: number //the id of the player who is big blind
 }
 ```
-uses: [THPlayer](#THPlayer), [Card](#Card)
+uses: [THPlayer](#thplayer), [Card](#card)
 
 ##### th_player_action:THPlayerAction
 Notifies you that a player is performing an action.
@@ -278,7 +277,7 @@ One or more community cards are being played.
   communityCards: Card[]
 }
 ```
-uses: [Card](#Card)
+uses: [Card](#card)
 
 ##### th_end_round:THEndRound
 Notifies you of the end of the round, revealing the winners.
@@ -291,7 +290,7 @@ Notifies you of the end of the round, revealing the winners.
   players: THPlayer[]
 }
 ```
-uses: [THPlayer](#THPlayer), [Card](#Card)
+uses: [THPlayer](#thplayer), [Card](#card)
 
 ##### th_end_game:THPlayer
 Only one player is left: the winner of this poker game.
@@ -299,7 +298,7 @@ Only one player is left: the winner of this poker game.
 #### TH Api Objects
 
 ##### THPlayer
-extends [Player](#Player)
+extends [Player](#player)
 ```typescript
 {
   cards?: Card[], //may be undefined or empty
@@ -311,12 +310,12 @@ extends [Player](#Player)
 ```
 
 ##### THSettings
-extends [Settings](#Settings)
+extends [Settings](#settings)
 ```typescript
 {
   startMoney: number, //min 1
   turnTime: number, //0 for unlimited
   useSidepots: boolean,
-  blinds: Map<number, number> //key=round/hand, value=small blind
+  blinds: Record<number, number> //key=round/hand, value=small blind
 }
 ```
