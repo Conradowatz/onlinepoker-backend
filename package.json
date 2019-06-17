@@ -2,10 +2,10 @@
   "name": "pokerbackend",
   "version": "1.0.0",
   "description": "",
-  "main": "App.js",
+  "main": "App.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node App.js"
+    "build": "tsc -p .",
+    "start": "npm run build && node ./App.js"
   },
   "keywords": [],
   "author": "",
