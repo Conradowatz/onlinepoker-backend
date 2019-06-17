@@ -35,19 +35,23 @@ export class TexasHoldEm extends GameMode {
   smallBlindPlayer: number; //which player has the small blind, big is next
   playersToAsk: number; //the amount of players that can still take action
   turnTimer: Timeout;
+  startTime: Date;
 
   constructor(public lobby: Lobby) {
     super();
 
     this.running = false;
     this.options = {
-      blinds: new Map<number, number>([[1, 1], [3, 5], [5, 10], [8, 25], [12, 30], [15, 50], [19, 75], [22, 100], [28, 150], [35, 200], [50, 300], [70, 400], [90, 500]]),
+      blindsTimeInsteadOfHand: false,
+      blindRate: 10,
       maxPlayers: 10,
       startMoney: 1000,
       turnTime: 60,
       useSidepots: true
 
     };
+    this.thPlayers = [];
+    this.thSpectators = new Map<number, Player>();
     this.registerListeners();
   }
 
@@ -82,7 +86,8 @@ export class TexasHoldEm extends GameMode {
       //check for permissions
       if (id != this.lobby.leader.id || this.running) return;
       //change to desired options
-      this.options.blinds = req.blinds;
+      this.options.blindsTimeInsteadOfHand = req.blindsTimeInsteadOfHands;
+      this.options.blindRate = req.blindsRate;
       this.options.useSidepots = req.useSidepots;
       this.options.turnTime = req.turnTime;
       this.options.maxPlayers = req.maxPlayers;
@@ -139,6 +144,7 @@ export class TexasHoldEm extends GameMode {
       this.thPlayers.push(new THPlayer(id, player.name, this.options.startMoney));
     }
     //initialize table
+    this.startTime = new Date();
     this.hand = 0;
     this.smallBlindPlayer = this.thPlayers.length - 1;
 
@@ -436,8 +442,19 @@ export class TexasHoldEm extends GameMode {
   }
 
   private setBlinds() {
-    if (this.options.blinds.has(this.hand)) {
-      this.smallBlind = this.options.blinds.get(this.hand);
+
+    if (this.options.blindRate > 0) {
+      if (this.options.blindsTimeInsteadOfHand) {
+        //time since start in 5*minutes
+        let time = (Date.now() - this.startTime.getTime()) / 300000;
+        let smallBlind = (this.options.startMoney * this.options.blindRate * Math.pow(time, 1.5)) / 1500;
+        this.smallBlind = Math.round(smallBlind + 1) * 5;
+      } else {
+        let smallBlind = (this.options.startMoney * this.options.blindRate * Math.pow(this.hand, 1.5)) / 4000;
+        this.smallBlind = Math.round(smallBlind + 1) * 5;
+      }
+    } else {
+      this.smallBlind = 0;
     }
   }
 
@@ -474,7 +491,8 @@ export class TexasHoldEm extends GameMode {
       startMoney: this.options.startMoney,
       turnTime: this.options.turnTime,
       useSidepots: this.options.useSidepots,
-      blinds: this.options.blinds
+      blindsTimeInsteadOfHands: this.options.blindsTimeInsteadOfHand,
+      blindsRate: this.options.blindRate
     };
   }
 }
@@ -484,5 +502,6 @@ export interface TexasHoldEmOptions {
   turnTime: number,
   useSidepots: boolean,
   maxPlayers: number,
-  blinds: Map<number, number>
+  blindsTimeInsteadOfHand: boolean,
+  blindRate: number
 }

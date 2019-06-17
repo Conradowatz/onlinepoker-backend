@@ -5,7 +5,7 @@ import {
   IsAlphanumeric,
   IsBoolean, IsIn,
   IsInt, IsOptional, IsString,
-  Length, Min,
+  Length, Max, Min,
 } from "class-validator";
 
 export class DisconnectEvent {
@@ -80,9 +80,12 @@ export class THSettings extends Settings {
   turnTime: number;
   @IsBoolean()
   useSidepots: boolean;
-  @IsInt({each: true})
-  @Min(1, {each: true})
-  blinds: Map<number, number>;
+  @IsBoolean()
+  blindsTimeInsteadOfHands: boolean;
+  @IsInt()
+  @Min(0)
+  @Max(10)
+  blindsRate: number;
 }
 
 export class THPlayer extends Player {

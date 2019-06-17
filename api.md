@@ -316,6 +316,7 @@ extends [Settings](#settings)
   startMoney: number, //min 1
   turnTime: number, //0 for unlimited
   useSidepots: boolean,
-  blinds: Record<number, number> //key=round/hand, value=small blind
+  blindsTimeInsteadOfHands: boolean, //true=use time for blinds, false=use hand for blinds
+  blindsRate: number //0-10, blind increase rate
 }
 ```
