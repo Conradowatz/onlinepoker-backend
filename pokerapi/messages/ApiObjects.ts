@@ -5,7 +5,7 @@ import {
   IsAlphanumeric,
   IsBoolean, IsIn,
   IsInt, IsOptional, IsString,
-  Length, Max, Min,
+  Length, Max, Min, ValidateIf,
 } from "class-validator";
 
 export class DisconnectEvent {
@@ -32,6 +32,7 @@ export class JoinLobbyRequest extends PokerMessage {
   id: string;
   @IsBoolean()
   spectate: boolean;
+  @ValidateIf(o => !o.spectate)
   @Length(1, 20)
   playerName?: string;
 }

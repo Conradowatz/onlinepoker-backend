@@ -188,7 +188,7 @@ export class TexasHoldEm extends GameMode {
     //notify players of round start
     {
       let m = new THNewRound();
-      m.smallBlind = this.smallBlind * 2;
+      m.smallBlind = this.smallBlind;
       m.bigBlind = this.smallBlind * 2;
       m.smallBlindPlayer = this.smallBlindPlayer;
       m.bigBlindPlayer = bigBlindPlayer;
