@@ -32,6 +32,7 @@ export class Lobby extends EventEmitter {
 
   join(id: number, name: string) {
     this.players.set(id, new Player(id, name));
+    this.sendLobbyUpdate();
   }
 
   private registerListeners() {

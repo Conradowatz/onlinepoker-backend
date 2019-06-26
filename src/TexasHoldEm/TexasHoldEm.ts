@@ -190,8 +190,8 @@ export class TexasHoldEm extends GameMode {
       let m = new THNewRound();
       m.smallBlind = this.smallBlind;
       m.bigBlind = this.smallBlind * 2;
-      m.smallBlindPlayer = this.smallBlindPlayer;
-      m.bigBlindPlayer = bigBlindPlayer;
+      m.smallBlindPlayer = this.thPlayers[this.smallBlindPlayer].id;
+      m.bigBlindPlayer = this.thPlayers[bigBlindPlayer].id;
       m.hand = this.hand;
       m.players = this.thPlayers.map((p) => p.apiTHPlayer(false));
       for (let player of this.thPlayers) {
@@ -230,7 +230,7 @@ export class TexasHoldEm extends GameMode {
     {
       let m = new THPlayerAction();
       m.action = "turn";
-      m.value = this.thPlayers[this.turn].apiTHPlayer(false);
+      m.value = this.thPlayers[this.turn].id;
       this.broadcastPlayers("th_player_action", m);
       this.broadcastSpectators("th_player_action", m);
     }
