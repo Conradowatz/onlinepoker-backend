@@ -153,7 +153,10 @@ export class TexasHoldEm extends GameMode {
       let m = new THStartGame();
       m.players = this.thPlayers.map((p) => p.apiTHPlayer(false));
       m.settings = this.apiSettings();
-      this.broadcastPlayers("th_start", m);
+      for (let i=0; i<this.thPlayers.length; i++) {
+        m.yourIndex = i;
+        api.sendMessage(this.thPlayers[i].id, "th_start", m);
+      }
       this.broadcastSpectators("th_start", m);
     }
 
@@ -194,8 +197,10 @@ export class TexasHoldEm extends GameMode {
       m.bigBlindPlayer = this.thPlayers[bigBlindPlayer].id;
       m.hand = this.hand;
       m.players = this.thPlayers.map((p) => p.apiTHPlayer(false));
-      for (let player of this.thPlayers) {
+      for (let i=0; i<this.thPlayers.length; i++) {
+        let player = this.thPlayers[i];
         m.yourCards = player.apiTHPlayer(true).cards;
+        m.yourIndex = i;
         api.sendMessage(player.id, "th_new_round", m);
       }
       this.broadcastSpectators("th_new_round", m);

@@ -226,6 +226,7 @@ Notifies you that the game has started.
 ```typescript
 {
   players: THPlayer[],
+  yourIndex: number, //index of you in the above array
   settings: THSettings
 }
 ```
@@ -237,6 +238,7 @@ Notifies you that a new round/hand has started.
 ```typescript
 {
   players: THPlayer[],
+  yourIndex: number, //index of you in the above array
   yourCards: Card[],
   hand: number, //round number
   smallBlind: number,

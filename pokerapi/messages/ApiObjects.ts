@@ -99,11 +99,13 @@ export class THPlayer extends Player {
 
 export class THStartGame extends PokerMessage {
   players: THPlayer[];
+  yourIndex: number;
   settings: THSettings
 }
 
 export class THNewRound extends PokerMessage {
   players: THPlayer[];
+  yourIndex: number;
   yourCards: Card[];
   hand: number;
   smallBlind: number;
