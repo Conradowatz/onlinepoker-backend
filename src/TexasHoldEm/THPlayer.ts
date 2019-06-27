@@ -28,7 +28,7 @@ export class THPlayer extends Player {
 
   public static ALL_OPTIONS = [THPlayer.OPTION_CHECK, THPlayer.OPTION_RAISE, THPlayer.OPTION_CALL, THPlayer.OPTION_ALLIN, THPlayer.OPTION_FOLD];
 
-  apiTHPlayer(showCards: boolean): ApiTHPlayer {
+  apiTHPlayer(showCards: boolean, index: number): ApiTHPlayer {
     let cards = this.cards.map((c) => c.apiCard());
     return {
       id: this.id,
@@ -37,7 +37,8 @@ export class THPlayer extends Player {
       money: this.money,
       bet: this.bet,
       allIn: this.allIn,
-      folded: this.folded
+      folded: this.folded,
+      index: index
     };
   }
 }

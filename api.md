@@ -267,6 +267,9 @@ It's your turn. Please respond with th_action and one of the available options. 
 ```typescript
 {
   options: string[],
+  minRaise: number, //min amount to for a raise
+  maxRaise: number, //max amount for a raise
+  firstBet: boolean, //if this is you first betting chance
   timeout: number //time in seconds
 }
 ```
@@ -276,10 +279,12 @@ One or more community cards are being played.
 ###### THCommunityCard
 ```typescript
 {
-  communityCards: Card[]
+  communityCards: Card[],
+  players: THPlayer[],
+  pot: number
 }
 ```
-uses: [Card](#card)
+uses: [Card](#card), [THPlayer](#thplayer)
 
 ##### th_end_round:THEndRound
 Notifies you of the end of the round, revealing the winners.
@@ -307,7 +312,8 @@ extends [Player](#player)
   money: number,
   bet: number,
   allIn: boolean, //whether this player is all in
-  folded: boolean //whether this player has already folded
+  folded: boolean, //whether this player has already folded
+  index: number //index in the player array
 }
 ```
 

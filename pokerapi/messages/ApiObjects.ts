@@ -95,6 +95,7 @@ export class THPlayer extends Player {
   bet: number;
   allIn: boolean;
   folded: boolean;
+  index: number;
 }
 
 export class THStartGame extends PokerMessage {
@@ -123,19 +124,24 @@ export class THPlayerAction extends PokerMessage {
 export class THYourTurn extends PokerMessage {
   options: string[];
   timeout: number;
+  minRaise: number;
+  maxRaise: number;
+  firstBet: boolean;
 }
 
 export class THAction extends PokerMessage {
   @IsString()
   @IsIn(["call", "fold", "check", "raise", "allin", "giveup"])
   action: "call" | "fold" | "check" | "raise" | "allin" | "giveup";
-  @IsOptional()
+  @ValidateIf((o) => o.action==="raise")
   @IsInt()
   value?: number;
 }
 
 export class THCommunityCard extends PokerMessage {
   communityCards: Card[];
+  players: THPlayer[];
+  pot: number;
 }
 
 export class THEndRound extends PokerMessage {

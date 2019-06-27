@@ -132,6 +132,7 @@ export class TexasHoldEm extends GameMode {
   }
 
   startGame(): void {
+    console.log("Starting the game...");
 
     //set running status
     this.running = true;
@@ -151,7 +152,7 @@ export class TexasHoldEm extends GameMode {
     //send startGame
     {
       let m = new THStartGame();
-      m.players = this.thPlayers.map((p) => p.apiTHPlayer(false));
+      m.players = this.thPlayers.map((p, i) => p.apiTHPlayer(false, i));
       m.settings = this.apiSettings();
       for (let i=0; i<this.thPlayers.length; i++) {
         m.yourIndex = i;
@@ -165,7 +166,7 @@ export class TexasHoldEm extends GameMode {
   }
 
   private newRound() {
-
+    console.log("New Round!");
     //initialize round
     this.hand++;
     this.setBlinds();
@@ -196,10 +197,10 @@ export class TexasHoldEm extends GameMode {
       m.smallBlindPlayer = this.thPlayers[this.smallBlindPlayer].id;
       m.bigBlindPlayer = this.thPlayers[bigBlindPlayer].id;
       m.hand = this.hand;
-      m.players = this.thPlayers.map((p) => p.apiTHPlayer(false));
+      m.players = this.thPlayers.map((p, i) => p.apiTHPlayer(false, i));
       for (let i=0; i<this.thPlayers.length; i++) {
         let player = this.thPlayers[i];
-        m.yourCards = player.apiTHPlayer(true).cards;
+        m.yourCards = player.apiTHPlayer(true, i).cards;
         m.yourIndex = i;
         api.sendMessage(player.id, "th_new_round", m);
       }
@@ -211,17 +212,16 @@ export class TexasHoldEm extends GameMode {
   }
 
   private nextPlayer() {
-
+    console.log("Next Player");
     //check if betting phase is over
     let playersToBet = 0; //players that still need to bet
     for (let p of this.thPlayers) {
       if (!p.folded && !p.allIn && p.bet<this.highestBet) playersToBet++;
     }
-    if (playersToBet==0 || this.playersToAsk==0) {
+    if (playersToBet==0 && this.playersToAsk==0) {
       this.nextCommunityCard();
     }
 
-    this.playersToAsk--;
     let player = this.thPlayers[this.turn];
 
     //check if player is active
@@ -236,6 +236,7 @@ export class TexasHoldEm extends GameMode {
       let m = new THPlayerAction();
       m.action = "turn";
       m.value = this.thPlayers[this.turn].id;
+      m.player = this.thPlayers[this.turn].apiTHPlayer(false, this.turn);
       this.broadcastPlayers("th_player_action", m);
       this.broadcastSpectators("th_player_action", m);
     }
@@ -247,6 +248,9 @@ export class TexasHoldEm extends GameMode {
       let m = new THYourTurn();
       m.options = player.availableOptions;
       m.timeout = this.options.turnTime;
+      m.minRaise = this.highestBet-player.bet+this.smallBlind;
+      m.maxRaise = player.money;
+      m.firstBet = player.bet === 0;
       api.sendMessage(player.id, "th_your_turn", m);
     }
 
@@ -261,11 +265,13 @@ export class TexasHoldEm extends GameMode {
   }
 
   private playerAction(action: string, value?: number) {
-
+    console.log("Player took action");
     //check if player can do this action
     if (!this.thPlayers[this.turn].availableOptions.includes(action)) {
       return;
     }
+
+    this.playersToAsk--;
 
     switch (action) {
       case THPlayer.OPTION_CHECK:
@@ -283,7 +289,19 @@ export class TexasHoldEm extends GameMode {
         this.actionFold(this.turn);
     }
 
-    this.turn = this.getNextPlayer((this.turn));
+    //broadcast action
+    {
+      let message:THPlayerAction = {
+        player: this.thPlayers[this.turn].apiTHPlayer(false, this.turn),
+        // @ts-ignore
+        action: action,
+        value: value
+      };
+      this.broadcastPlayers("th_player_action", message);
+      this.broadcastSpectators("th_player_action", message);
+    }
+
+    this.turn = this.getNextPlayer(this.turn);
     this.nextPlayer();
   }
 
@@ -292,7 +310,7 @@ export class TexasHoldEm extends GameMode {
     if (player.bet>=this.highestBet) {
       player.availableOptions.push(THPlayer.OPTION_CHECK);
     }
-    if (player.money>this.highestBet-player.bet+this.smallBlind) {
+    if (player.money>=this.highestBet-player.bet+this.smallBlind) {
       player.availableOptions.push(THPlayer.OPTION_RAISE);
     }
     if (player.money>=this.highestBet && player.bet<this.highestBet) {
@@ -301,7 +319,7 @@ export class TexasHoldEm extends GameMode {
   }
 
   private nextCommunityCard() {
-
+    console.log("Next CC");
     let activePlayers = 0;
     //collect bets
     for (let p of this.thPlayers) {
@@ -328,6 +346,8 @@ export class TexasHoldEm extends GameMode {
     {
       let m = new THCommunityCard();
       m.communityCards = this.communityCards.map((c) => c.apiCard());
+      m.players = this.thPlayers.map((p, i) => p.apiTHPlayer(false, i));
+      m.pot = this.pot;
       this.broadcastPlayers("th_community_card", m);
       this.broadcastSpectators("th_community_card", m);
     }
@@ -336,15 +356,14 @@ export class TexasHoldEm extends GameMode {
     this.turn = this.getNextPlayer(this.smallBlindPlayer-1);
     this.playersToAsk = 0;
     for (let p of this.thPlayers) if (!p.folded && !p.allIn) this.playersToAsk++;
-    this.highestBet = 2*this.smallBlind;
     //start betting phase
     this.nextPlayer();
   }
 
   private getNextPlayer(playerIndex: number):number {
-    let nextPlayer = (playerIndex+1) & this.thPlayers.length;
-    let player = this.thPlayers[playerIndex];
-    if (player.folded || player.allIn) return this.getNextPlayer(playerIndex);
+    let nextPlayer = (playerIndex+1) % this.thPlayers.length;
+    let player = this.thPlayers[nextPlayer];
+    if (player.folded || player.allIn) return this.getNextPlayer(nextPlayer);
     return nextPlayer;
   }
 
@@ -379,9 +398,9 @@ export class TexasHoldEm extends GameMode {
       let m = new THEndRound();
       let activePlayers = 0;
       this.thPlayers.forEach((p) => {if(!p.folded) activePlayers++});
-      m.winners = winningPlayers.map((p) => this.thPlayers[p].apiTHPlayer(activePlayers>1));
+      m.winners = winningPlayers.map((p, i) => this.thPlayers[p].apiTHPlayer(activePlayers>1, i));
       m.winningCards = winningsCards.map((c) => c.apiCard());
-      m.players = this.thPlayers.map((p) => p.apiTHPlayer(!p.folded && activePlayers>1));
+      m.players = this.thPlayers.map((p, i) => p.apiTHPlayer(!p.folded && activePlayers>1, i));
       m.reason = winnerHands[0].name;
       this.broadcastPlayers("th_end_round", m);
       this.broadcastSpectators("th_end_round", m);
@@ -439,8 +458,8 @@ export class TexasHoldEm extends GameMode {
 
     //notify players
     {
-      this.broadcastPlayers("th_end_game", this.thPlayers[0].apiTHPlayer(false));
-      this.broadcastSpectators("th_end_game", this.thPlayers[0].apiTHPlayer(false));
+      this.broadcastPlayers("th_end_game", this.thPlayers[0].apiTHPlayer(false, 0));
+      this.broadcastSpectators("th_end_game", this.thPlayers[0].apiTHPlayer(false, 0));
     }
 
     this.running = false;
@@ -473,7 +492,7 @@ export class TexasHoldEm extends GameMode {
 
   private actionCall(playerIndex: number) {
     let player = this.thPlayers[playerIndex];
-    this.actionBet(playerIndex, this.pot-player.bet);
+    this.actionBet(playerIndex, this.highestBet-player.bet);
   }
 
   private actionFold(playerIndex: number) {
