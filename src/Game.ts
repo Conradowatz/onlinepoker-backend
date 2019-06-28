@@ -40,32 +40,39 @@ function registerListeners() {
     if (!lobbies.has(req.id)) {
       response.reason = "unknown_id";
     } else {
-      //check if it has free slots
       let lobby = lobbies.get(req.id);
-      if (lobby.players.size == lobby.gameMode.getMaxPlayers()) {
-        response.reason = "full";
-      } else if (!lobby.gameMode.isJoinable()) {
-        response.reason = "not_joinable";
-      } else {
-        //perform join
-        api.moveUserToLobby(id, lobby.id);
+      //perform join
+      let success = api.moveUserToLobby(id, lobby.id);
+      if (success) {
         if (req.spectate) {
+          response.success = true;
           lobby.spectate(id);
         } else {
-          lobby.join(id, req.playerName);
+          //check if it has free slots
+          if (lobby.players.size == lobby.gameMode.getMaxPlayers()) {
+            response.reason = "full";
+          } else if (!lobby.gameMode.isJoinable()) {
+            response.reason = "not_joinable";
+          } else {
+            response.success = true;
+            lobby.join(id, req.playerName);
+          }
         }
-
-        //respond
-        response.success = true;
-        response.lobby = lobby.apiLobby(id);
+      } else {
+        response.reason = "in_other_lobby";
       }
+
+      //respond
+      response.lobby = lobby.apiLobby(id);
+
     }
     api.sendMessage(id, "join_lobby", response);
   });
 
   api.on("create_lobby", (id, req: CreateLobbyRequest) => {
     let lobby = new Lobby(getRandomLobbyId(), {id: id}, req.name, req.hidden);
-    api.moveUserToLobby(id, lobby.id);
+    let success = api.moveUserToLobby(id, lobby.id);
+    if (!success) return; //TODO make error message
     lobby.join(id, req.playerName);
     lobbies.set(lobby.id, lobby);
     api.sendMessage(id, "create_lobby", lobby.apiLobby(id));
@@ -74,6 +81,9 @@ function registerListeners() {
 }
 
 export function deleteLobby(id: string) {
+  //remove spectators
+  lobbies.get(id).spectators.forEach((s) => api.removeUserFromLobby(id, s.id)); //TODO notify them they got kicked
+  //delete lobby
   lobbies.delete(id);
   api.unregisterLobby(id);
 }

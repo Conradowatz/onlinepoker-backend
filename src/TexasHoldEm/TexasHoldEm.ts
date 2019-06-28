@@ -68,7 +68,7 @@ export class TexasHoldEm extends GameMode {
       if (this.thPlayers !== undefined) {
         for (let i = 0; i < this.thPlayers.length; i++) {
           if (this.thPlayers[i].id == id) {
-            this.removePlayer(i, "disconnected");
+            this.removePlayer(i, false);
             return;
           }
         }
@@ -106,7 +106,7 @@ export class TexasHoldEm extends GameMode {
         }
       }
       if (message.action == "giveup") {
-            this.removePlayer(playerIndex, "giveup");
+            this.removePlayer(playerIndex, true);
       } else {
         //check for permission
         if (this.turn != playerIndex) return;
@@ -215,11 +215,14 @@ export class TexasHoldEm extends GameMode {
     console.log("Next Player");
     //check if betting phase is over
     let playersToBet = 0; //players that still need to bet
+    let activePlayers = 0;
     for (let p of this.thPlayers) {
       if (!p.folded && !p.allIn && p.bet<this.highestBet) playersToBet++;
+      if (!p.folded && !p.allIn) activePlayers++;
     }
-    if (playersToBet==0 && this.playersToAsk==0) {
+    if ((playersToBet==0 && this.playersToAsk==0) || activePlayers==1) {
       this.nextCommunityCard();
+      return;
     }
 
     let player = this.thPlayers[this.turn];
@@ -250,7 +253,7 @@ export class TexasHoldEm extends GameMode {
       m.timeout = this.options.turnTime;
       m.minRaise = this.highestBet-player.bet+this.smallBlind;
       m.maxRaise = player.money;
-      m.firstBet = player.bet === 0;
+      m.firstBet = this.highestBet===0;
       api.sendMessage(player.id, "th_your_turn", m);
     }
 
@@ -331,6 +334,7 @@ export class TexasHoldEm extends GameMode {
 
     //end round if all community cards are open or only one player left
     if (this.communityCards.length==5 || activePlayers<=1) {
+      this.turn = -1;
       this.endRound();
       return;
     }
@@ -368,24 +372,43 @@ export class TexasHoldEm extends GameMode {
   }
 
   private endRound() {
-
-    //determine winner
-    let hands = [];
-    let communityCardsString = this.communityCards.map((c) => c.getSolverString());
-    for (let i=0; i<this.thPlayers.length; i++) {
-      if (!this.thPlayers[i].folded) {
-        let cardStrings = communityCardsString.slice();
-        cardStrings.push(this.thPlayers[i].cards[0].getSolverString(), this.thPlayers[i].cards[1].getSolverString());
-        let hand = Hand.solve(cardStrings, "standard", false);
-        hands.push(hand);
+    console.log("End round");
+    //==determine winner===
+    let winningPlayers = []; //index of winning players
+    let winningsCards: Card[] = [];
+    let winnerHand = ""; //the reason for winning
+    let activePlayers = 0;
+    this.thPlayers.forEach((p) => {if(!p.folded) activePlayers++});
+    if (activePlayers>1) {
+      //compare cards
+      let hands = [];
+      let communityCardsString = this.communityCards.map((c) => c.getSolverString());
+      for (let i = 0; i < this.thPlayers.length; i++) {
+        if (!this.thPlayers[i].folded) {
+          let cardStrings = communityCardsString.slice();
+          cardStrings.push(this.thPlayers[i].cards[0].getSolverString(), this.thPlayers[i].cards[1].getSolverString());
+          let hand = Hand.solve(cardStrings, "standard", false);
+          hands.push(hand);
+        }
       }
-    }
-    let winnerHands = Hand.winners(hands);
-    let winningPlayers = [];
-    let winningsCards:Card[] = [];
-    for (let wh of winnerHands) {
-      winningPlayers.push(hands.indexOf(wh));
-      winningsCards = winningsCards.concat(wh.cards.map((c) => Card.fromString(c.toString())));
+      let winnerHands = Hand.winners(hands);
+      winnerHand = winnerHands[0].name;
+      for (let wh of winnerHands) {
+        winningPlayers.push(hands.indexOf(wh));
+        winningsCards = winningsCards.concat(wh.cards.map((c) => Card.fromString(c.toString())));
+      }
+    } else {
+      //only one player left
+      let winner:number;
+      for (let i=0; i<this.thPlayers.length; i++) {
+        if (!this.thPlayers[i].folded) {
+          winner = i;
+          break;
+        }
+      }
+      winningPlayers = [winner];
+      winnerHand = "One Left";
+      winningsCards = [];
     }
 
     //give winners their money
@@ -396,12 +419,10 @@ export class TexasHoldEm extends GameMode {
     //notify players
     {
       let m = new THEndRound();
-      let activePlayers = 0;
-      this.thPlayers.forEach((p) => {if(!p.folded) activePlayers++});
       m.winners = winningPlayers.map((p, i) => this.thPlayers[p].apiTHPlayer(activePlayers>1, i));
       m.winningCards = winningsCards.map((c) => c.apiCard());
       m.players = this.thPlayers.map((p, i) => p.apiTHPlayer(!p.folded && activePlayers>1, i));
-      m.reason = winnerHands[0].name;
+      m.reason = winnerHand;
       this.broadcastPlayers("th_end_round", m);
       this.broadcastSpectators("th_end_round", m);
     }
@@ -409,12 +430,14 @@ export class TexasHoldEm extends GameMode {
     //determine players with no money left
     for (let i=0; i<this.thPlayers.length; i++) {
       if (this.thPlayers[i].money==0) {
-        this.removePlayer(i, "lost");
+        this.removePlayer(i, true);
         i--;
       }
     }
 
+    //give 10 seconds delay before new round
     setTimeout(() => {
+      if (this==undefined) return;
       //check if only one player is left
       if (this.thPlayers.length==1) {
         this.endOfGame();
@@ -425,19 +448,29 @@ export class TexasHoldEm extends GameMode {
 
   }
 
-  private removePlayer(playerIndex: number, reason: string) {
+  private removePlayer(playerIndex: number, addToSpectators: boolean) {
     //add to spectators
     let thPlayer = this.thPlayers[playerIndex];
-    this.thSpectators.set(thPlayer.id, this.lobby.players.get(thPlayer.id));
-    //remove from players
-    this.thPlayers.splice(playerIndex, 1);
+    if (addToSpectators)
+      this.thSpectators.set(thPlayer.id, this.lobby.players.get(thPlayer.id));
+    //stop timer if set
+    if (this.turn==playerIndex) {
+      clearTimeout(this.turnTimer);
+      this.playerAction(THPlayer.OPTION_FOLD);
+    }
 
+    //notify players
     {
       let m = new THPlayerAction();
       m.action = "giveup";
+      m.value = this.thPlayers[playerIndex].id;
+      m.player = this.thPlayers[playerIndex].apiTHPlayer(false, playerIndex);
       this.broadcastPlayers("th_player_action", m);
       this.broadcastSpectators("th_player_action", m);
     }
+
+    //remove from players
+    this.thPlayers.splice(playerIndex, 1);
   }
 
   private broadcastSpectators(command: Command | ServerCommand, message: PokerMessage) {

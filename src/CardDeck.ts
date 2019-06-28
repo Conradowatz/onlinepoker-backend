@@ -6,7 +6,7 @@ export class CardDeck {
   constructor() {
     this.deck = [];
     for (let value=1; value<=13; value++) {
-      for (let color=1; color<=4; color++) {
+      for (let color=0; color<=3; color++) {
         this.deck.push(new Card(color, value))
       }
     }

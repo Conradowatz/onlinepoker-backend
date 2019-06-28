@@ -158,8 +158,13 @@ export class PokerServer extends EventEmitter {
     }
   }
 
-  public moveUserToLobby(playerId: number, lobbyId: string) {
-    this.playerLobbyMap.set(playerId, lobbyId);
+  public moveUserToLobby(playerId: number, lobbyId: string):boolean {
+    if (this.playerLobbyMap.has(playerId)) {
+      return false;
+    } else {
+      this.playerLobbyMap.set(playerId, lobbyId);
+      return true;
+    }
   }
 
   public onLobby(lobbyId: string, command: Command | ClientCommand | "drop_user", callback: (id: number, message?: PokerMessage.PokerMessage) => void) {
@@ -175,7 +180,7 @@ export class PokerServer extends EventEmitter {
     this.lobbyEmitterMap.delete(lobbyId);
   }
 
-  public removePlayerFromLobby(lobbyId: string, playerId: number) {
+  public removeUserFromLobby(lobbyId: string, playerId: number) {
     this.playerLobbyMap.delete(playerId);
   }
 

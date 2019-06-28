@@ -102,7 +102,7 @@ export class Lobby extends EventEmitter {
 
   private dropPlayer(id: number) {
     this.players.delete(id);
-    api.removePlayerFromLobby(this.id, id);
+    api.removeUserFromLobby(this.id, id);
     if (this.players.size == 0) {
       deleteLobby(this.id);
       return;
