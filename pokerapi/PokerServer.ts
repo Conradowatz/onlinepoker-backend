@@ -19,11 +19,13 @@ import {
   Settings, THAction,
   THSettings
 } from "./messages/ApiObjects";
+import {Server as FileServer} from "node-static";
 
 export class PokerServer extends EventEmitter {
 
   static protocol = "poker1";
 
+  fileServer: FileServer;
   httpServer: HttpServer;
   wsServer: WebSocketServer;
   idConnectionMap = new Map<number, connection>();
@@ -33,10 +35,11 @@ export class PokerServer extends EventEmitter {
 
   constructor(public port: number, public maxConnections = 1000) {
     super();
-    //create https backend server
+    //create http backend server
+    this.fileServer = new FileServer("build");
     this.httpServer = http.createServer(((req, res) => {
-      res.writeHead(404);
-      res.end();
+      console.log("request");
+      this.fileServer.serve(req, res);
     }));
     this.httpServer.listen(port, () =>
         console.log('Server is listening on port ' + port));

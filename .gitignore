@@ -9,3 +9,5 @@ App.d.ts
 !node_modules/@types
 node_modules/@types/*
 !node_modules/@types/pokersolver
+client/*
+!client/readme.md
