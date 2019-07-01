@@ -15,6 +15,7 @@ import {Hand} from "pokersolver";
 import Timeout = NodeJS.Timeout;
 import {Player} from "../Player";
 import {Command, PokerMessage, ServerCommand} from "../../pokerapi/messages/PokerMessage";
+import {clearTimeout} from "timers";
 
 export class TexasHoldEm extends GameMode {
 
@@ -296,6 +297,8 @@ export class TexasHoldEm extends GameMode {
       case THPlayer.OPTION_FOLD:
         this.actionFold(this.turn);
     }
+
+    clearTimeout(this.turnTimer);
     this.playersToAsk--;
 
     //broadcast action
