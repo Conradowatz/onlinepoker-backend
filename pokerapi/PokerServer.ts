@@ -36,7 +36,7 @@ export class PokerServer extends EventEmitter {
   constructor(public port: number, public maxConnections = 1000) {
     super();
     //create http backend server
-    this.fileServer = new FileServer("build");
+    this.fileServer = new FileServer("client");
     this.httpServer = http.createServer(((req, res) => {
       console.log("request");
       this.fileServer.serve(req, res);

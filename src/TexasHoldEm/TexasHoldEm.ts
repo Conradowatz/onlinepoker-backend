@@ -269,17 +269,22 @@ export class TexasHoldEm extends GameMode {
 
   private playerAction(action: string, value?: number) {
     console.log("Player took action");
+    //check if turn is set
+    if (this.turn<0 || this.turn>=this.thPlayers.length) {
+      console.log("Error in playerAction: this.turn: " + this.turn);
+      return;
+    }
     //check if player can do this action
     if (!this.thPlayers[this.turn].availableOptions.includes(action)) {
       return;
     }
 
-    this.playersToAsk--;
-
     switch (action) {
       case THPlayer.OPTION_CHECK:
         break;
       case THPlayer.OPTION_RAISE:
+        //check if valid amount
+        if (value<this.highestBet-this.thPlayers[this.turn].bet+this.smallBlind) return;
         this.actionBet(this.turn, value);
         break;
       case THPlayer.OPTION_CALL:
@@ -291,6 +296,7 @@ export class TexasHoldEm extends GameMode {
       case THPlayer.OPTION_FOLD:
         this.actionFold(this.turn);
     }
+    this.playersToAsk--;
 
     //broadcast action
     {
@@ -453,7 +459,7 @@ export class TexasHoldEm extends GameMode {
     let thPlayer = this.thPlayers[playerIndex];
     if (addToSpectators)
       this.thSpectators.set(thPlayer.id, this.lobby.players.get(thPlayer.id));
-    //stop timer if set
+    //if player is choosing
     if (this.turn==playerIndex) {
       clearTimeout(this.turnTimer);
       this.playerAction(THPlayer.OPTION_FOLD);
