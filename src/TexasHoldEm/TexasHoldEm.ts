@@ -15,6 +15,7 @@ import {Hand} from "pokersolver";
 import Timeout = NodeJS.Timeout;
 import {Player} from "../Player";
 import {Command, PokerMessage, ServerCommand} from "../../pokerapi/messages/PokerMessage";
+import {clearTimeout} from "timers";
 
 export class TexasHoldEm extends GameMode {
 
@@ -275,6 +276,7 @@ export class TexasHoldEm extends GameMode {
     }
 
     this.playersToAsk--;
+    clearTimeout(this.turnTimer);
 
     switch (action) {
       case THPlayer.OPTION_CHECK:
