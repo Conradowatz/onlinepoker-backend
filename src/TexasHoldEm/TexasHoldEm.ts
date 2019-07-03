@@ -228,7 +228,7 @@ export class TexasHoldEm extends GameMode {
         }
       }
     }
-    if ((playersToBet===0 && this.playersToAsk<=0) || activePlayers==1) {
+    if (playersToBet===0 && (this.playersToAsk<=0) || activePlayers<=1) {
       this.nextCommunityCard();
       return;
     }
