@@ -49,7 +49,7 @@ function registerListeners() {
           lobby.spectate(id);
         } else {
           //check if it has free slots
-          if (lobby.players.size == lobby.gameMode.getMaxPlayers()) {
+          if (lobby.players.size === lobby.gameMode.getMaxPlayers()) {
             response.reason = "full";
           } else if (!lobby.gameMode.isJoinable()) {
             response.reason = "not_joinable";

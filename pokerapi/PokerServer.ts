@@ -38,11 +38,10 @@ export class PokerServer extends EventEmitter {
     //create http backend server
     this.fileServer = new FileServer("client");
     this.httpServer = http.createServer(((req, res) => {
-      console.log("request");
       this.fileServer.serve(req, res);
     }));
     this.httpServer.listen(port, () =>
-        console.log('Server is listening on port ' + port));
+        console.log("Server is listening on port " + port));
 
     //create underlying ws server
     this.wsServer = new WebSocketServer({
@@ -62,25 +61,31 @@ export class PokerServer extends EventEmitter {
     if (!PokerServer.originIsAllowed(request.origin)) {
       // Make sure we only accept requests from an allowed origin
       request.reject();
-      console.log('Connection from origin ' + request.origin + ' rejected.');
+      console.log("Connection from origin " + request.origin + " rejected.");
       return;
     }
 
     //check for maximum connections
     if (this.wsServer.connections.length >= this.maxConnections) {
       request.reject();
-      console.log('Connection rejected. Too many active connections.');
+      console.log("Connection rejected. Too many active connections.");
       return;
     }
 
     //accept with protocol number
     if (!request.requestedProtocols.includes(PokerServer.protocol)) {
       request.reject();
-      console.log('Connection with unknown protocol rejected: ' + request.requestedProtocols);
+      console.log("Connection with unknown protocol rejected: '" + request.requestedProtocols+"'");
       return;
     }
     let connection = request.accept(PokerServer.protocol, request.origin);
-    console.log(' New connection accepted from: ' + connection.socket.localAddress);
+    let ip;
+    if (request.httpRequest.headers["x-real-ip"] !== undefined) {
+      ip = request.httpRequest.headers["x-real-ip"];
+    } else {
+      ip = connection.socket.localAddress
+    }
+    console.log("New connection accepted from: " + ip);
     this.onNewConnection(connection);
 
     //listen to incoming messages
@@ -151,6 +156,12 @@ export class PokerServer extends EventEmitter {
     }
   }
 
+  /**
+   * Emit an event to the lobby, the given player is currently registered on
+   * @param command
+   * @param playerId
+   * @param message
+   */
   private emitLobby(command: Command | ClientCommand | "drop_user", playerId: number, message?: PokerMessage.PokerMessage) {
     let lobbyId = this.playerLobbyMap.get(playerId);
     if (lobbyId != undefined) {
@@ -161,6 +172,12 @@ export class PokerServer extends EventEmitter {
     }
   }
 
+  /**
+   * Sets in which lobby the user is. If he is already in another lobby nothing happens.
+   * @param playerId
+   * @param lobbyId
+   * @return true if lobby is set, false if user is in another lobby
+   */
   public moveUserToLobby(playerId: number, lobbyId: string):boolean {
     if (this.playerLobbyMap.has(playerId)) {
       return false;
@@ -170,6 +187,12 @@ export class PokerServer extends EventEmitter {
     }
   }
 
+  /**
+   * Use this to register a listener for a specific lobby id. Listeners are automatically removed if lobby is unregistered.
+   * @param lobbyId
+   * @param command
+   * @param callback
+   */
   public onLobby(lobbyId: string, command: Command | ClientCommand | "drop_user", callback: (id: number, message?: PokerMessage.PokerMessage) => void) {
     let emitter = this.lobbyEmitterMap.get(lobbyId);
     if (emitter == undefined) {
@@ -179,10 +202,20 @@ export class PokerServer extends EventEmitter {
     emitter.on(command, callback);
   }
 
+  /**
+   * Deletes a lobby from the emitter-map. Removes all current listeners for onLobby
+   * @param lobbyId
+   */
   public unregisterLobby(lobbyId: string) {
+    this.lobbyEmitterMap.get(lobbyId).removeAllListeners();
     this.lobbyEmitterMap.delete(lobbyId);
   }
 
+  /**
+   * Removes a set lobby for the user (if any is set).
+   * @param lobbyId
+   * @param playerId
+   */
   public removeUserFromLobby(lobbyId: string, playerId: number) {
     this.playerLobbyMap.delete(playerId);
   }
@@ -201,16 +234,38 @@ export class PokerServer extends EventEmitter {
     console.log("User disconnected. Code: " + reasonCode + " Desc: " + description);
   }
 
-  public sendMessage(id: number, command: Command | ServerCommand, message: PokerMessage.PokerMessage) {
+  /**
+   * Send a message to a user per id, if the id is known. Otherwise does nothing.
+   * @param id
+   * @param command
+   * @param message
+   * @return true if message has been sent, false if id is unknown
+   */
+  public sendMessage(id: number, command: Command | ServerCommand, message?: PokerMessage.PokerMessage):boolean {
     let m = new ServerMessage();
     m.command = command;
     m.data = message;
-    this.idConnectionMap.get(id).sendUTF(serialize(m));
+    let connection = this.idConnectionMap.get(id);
+    if (connection !== undefined) {
+      connection.sendUTF(serialize(m));
+      return true;
+    } else {
+      return false;
+    }
   }
 
+  /**
+   * Send a message to a user and wait for a response. If userId is unknown, the callback is never called.
+   * @param id
+   * @param command
+   * @param message
+   * @param callback
+   * @return true if message has been sent, false if id is unknown.
+   */
   public sendMessageCall(id: number, command: Command | ServerCommand, message: PokerMessage.PokerMessage,
-                         callback: (data: PokerMessage.PokerMessage) => void) {
-    this.sendMessage(id, command, message);
+                         callback: (data: PokerMessage.PokerMessage) => void):boolean {
+    let success = this.sendMessage(id, command, message);
+    if (!success) return false;
     //wait for response with the same command from the same user and pass it to callback
     let pokerAPI = this;
     let listener = function(r_id: number, ...r_args) {
@@ -221,8 +276,14 @@ export class PokerServer extends EventEmitter {
       }
     };
     this.on(command, listener);
+    return true;
   }
 
+  /**
+   * Sends a message to every client currently connected to the server.
+   * @param command
+   * @param message
+   */
   public broadcastMessage(command: Command | ServerCommand, message: PokerMessage.PokerMessage) {
     let m = new ServerMessage();
     m.command = command;
@@ -237,7 +298,12 @@ export class PokerServer extends EventEmitter {
     skipMissingProperties: false
   };
 
-  private static validateObject(o) {
+  /**
+   * Wrapper for validateSync from class-validator
+   * @param o
+   * @return true if validation led to no errors
+   */
+  private static validateObject(o):boolean {
     let errors = validateSync(o, this.validatorOptions);
     if (errors.length>0) {
       console.log(errors);
@@ -247,6 +313,12 @@ export class PokerServer extends EventEmitter {
     }
   }
 
+  /**
+   * Validates a PokerMessage with the Annotations in ApiObjects.ts
+   * @param command
+   * @param message
+   * @return true if validation let to no errors
+   */
   private static validateMessage(command: Command | ClientCommand, message: PokerMessage.PokerMessage):boolean {
     switch (command) {
       case "get_lobbies":
@@ -261,7 +333,7 @@ export class PokerServer extends EventEmitter {
         if (PokerServer.validateObject(s)) {
           switch (s.gameMode) {
             case "texasholdem":
-              return PokerServer.validateObject(plainToClass(THSettings, message))
+              return PokerServer.validateObject(plainToClass(THSettings, message));
             default:
               return false
           }

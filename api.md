@@ -299,6 +299,9 @@ Notifies you of the end of the round, revealing the winners.
 ```
 uses: [THPlayer](#thplayer), [Card](#card)
 
+##### th_lost
+You lost the game and are now a spectator.
+
 ##### th_end_game:THPlayer
 Only one player is left: the winner of this poker game.
 

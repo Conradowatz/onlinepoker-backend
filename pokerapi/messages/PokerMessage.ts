@@ -24,16 +24,13 @@ export type ServerCommand =
   "disconnect"
   | "lobby_update"
   | "chat_in"
-  | "th_start" | "th_new_round" | "th_player_action" | "th_your_turn" | "th_community_card" | "th_end_round" | "th_end_game"
+  | "th_start" | "th_new_round" | "th_player_action" | "th_your_turn" | "th_community_card" | "th_end_round" | "th_end_game" | "th_lost"
   ;
 
-let commands = [
+let clientCommands = [
   "get_lobbies",
   "join_lobby",
   "create_lobby",
-];
-
-let clientCommands = [
   "change_settings",
   "change_gamemode",
   "start_game",
@@ -54,7 +51,7 @@ export class ServerMessage {
 }
 
 export class ClientMessage {
-  @IsIn(commands.concat(clientCommands))
+  @IsIn(clientCommands)
   command: Command | ClientCommand;
   @ValidateIf(o => !commandsWithoutData.includes(o.command))
   @IsDefined()

@@ -8,6 +8,7 @@ export abstract class GameMode {
   abstract isJoinable():boolean;
   abstract apiSettings():Settings;
   abstract startGame():void;
+  abstract stopGame():void;
 
   static availableGamemodes = ["texasholdem"];
 }

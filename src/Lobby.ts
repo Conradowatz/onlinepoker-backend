@@ -103,11 +103,12 @@ export class Lobby extends EventEmitter {
   private dropPlayer(id: number) {
     this.players.delete(id);
     api.removeUserFromLobby(this.id, id);
-    if (this.players.size == 0) {
+    if (this.players.size === 0) {
+      this.gameMode.stopGame();
       deleteLobby(this.id);
       return;
     }
-    if (this.leader.id == id) {
+    if (this.leader.id === id) {
       //set new leader
       this.leader.id = this.players.keys().next().value;
     }

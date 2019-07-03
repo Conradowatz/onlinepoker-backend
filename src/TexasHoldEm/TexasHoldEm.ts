@@ -24,6 +24,7 @@ export class TexasHoldEm extends GameMode {
   running: boolean;
   //table attributes
   thPlayers: THPlayer[];
+  ghostPlayers: number[]; // players (indices) that aren't in the game but still in a round
   thSpectators: Map<number, Player>;
   hand: number; //round number
   smallBlind: number; //value of the small blind, bigBlind = 2*smallBlind
@@ -36,6 +37,7 @@ export class TexasHoldEm extends GameMode {
   smallBlindPlayer: number; //which player has the small blind, big is next
   playersToAsk: number; //the amount of players that can still take action
   turnTimer: Timeout;
+  newRoundTimer: Timeout;
   startTime: Date;
 
   constructor(public lobby: Lobby) {
@@ -68,7 +70,7 @@ export class TexasHoldEm extends GameMode {
       }
       if (this.thPlayers !== undefined) {
         for (let i = 0; i < this.thPlayers.length; i++) {
-          if (this.thPlayers[i].id == id) {
+          if (this.thPlayers[i].id === id) {
             this.removePlayer(i, false);
             return;
           }
@@ -99,18 +101,19 @@ export class TexasHoldEm extends GameMode {
 
     api.onLobby(this.lobby.id, "th_action", (id, message: THAction) => {
       if (!this.running) return;
-      let playerIndex;
+      let playerIndex = -1;
       for (let i=0; i<this.thPlayers.length; i++) {
-        if (this.thPlayers[i].id == id) {
+        if (this.thPlayers[i].id === id) {
           playerIndex = i;
           break;
         }
       }
-      if (message.action == "giveup") {
+      if (playerIndex === -1) return;
+      if (message.action === "giveup") {
             this.removePlayer(playerIndex, true);
       } else {
         //check for permission
-        if (this.turn != playerIndex) return;
+        if (this.turn !== playerIndex) return;
         this.playerAction(message.action, message.value);
       }
     });
@@ -133,7 +136,6 @@ export class TexasHoldEm extends GameMode {
   }
 
   startGame(): void {
-    console.log("Starting the game...");
 
     //set running status
     this.running = true;
@@ -141,6 +143,7 @@ export class TexasHoldEm extends GameMode {
 
     //initialize players
     this.thPlayers = [];
+    this.ghostPlayers = [];
     this.thSpectators = new Map<number, Player>();
     for (let [id, player] of this.lobby.players) {
       this.thPlayers.push(new THPlayer(id, player.name, this.options.startMoney));
@@ -167,7 +170,7 @@ export class TexasHoldEm extends GameMode {
   }
 
   private newRound() {
-    console.log("New Round!");
+
     //initialize round
     this.hand++;
     this.setBlinds();
@@ -213,15 +216,19 @@ export class TexasHoldEm extends GameMode {
   }
 
   private nextPlayer() {
-    console.log("Next Player");
+
     //check if betting phase is over
     let playersToBet = 0; //players that still need to bet
-    let activePlayers = 0;
+    let activePlayers = 0; //players that are able to bet
     for (let p of this.thPlayers) {
-      if (!p.folded && !p.allIn && p.bet<this.highestBet) playersToBet++;
-      if (!p.folded && !p.allIn) activePlayers++;
+      if (!p.folded && !p.allIn) {
+        activePlayers++;
+        if (p.bet<this.highestBet) {
+          playersToBet++;
+        }
+      }
     }
-    if ((playersToBet==0 && this.playersToAsk==0) || activePlayers==1) {
+    if ((playersToBet===0 && this.playersToAsk<=0) || activePlayers==1) {
       this.nextCommunityCard();
       return;
     }
@@ -269,7 +276,7 @@ export class TexasHoldEm extends GameMode {
   }
 
   private playerAction(action: string, value?: number) {
-    console.log("Player took action");
+
     //check if turn is set
     if (this.turn<0 || this.turn>=this.thPlayers.length) {
       console.log("Error in playerAction: this.turn: " + this.turn);
@@ -331,7 +338,7 @@ export class TexasHoldEm extends GameMode {
   }
 
   private nextCommunityCard() {
-    console.log("Next CC");
+
     let activePlayers = 0;
     //collect bets
     for (let p of this.thPlayers) {
@@ -342,14 +349,14 @@ export class TexasHoldEm extends GameMode {
     this.highestBet = 0;
 
     //end round if all community cards are open or only one player left
-    if (this.communityCards.length==5 || activePlayers<=1) {
+    if (this.communityCards.length===5 || activePlayers<=1) {
       this.turn = -1;
       this.endRound();
       return;
     }
 
     //new community cards
-    if (this.communityCards.length==0) {
+    if (this.communityCards.length===0) {
       this.communityCards.push(this.deck.getRandomCard());
       this.communityCards.push(this.deck.getRandomCard());
     }
@@ -381,7 +388,7 @@ export class TexasHoldEm extends GameMode {
   }
 
   private endRound() {
-    console.log("End round");
+
     //==determine winner===
     let winningPlayers = []; //index of winning players
     let winningsCards: Card[] = [];
@@ -438,38 +445,41 @@ export class TexasHoldEm extends GameMode {
 
     //determine players with no money left
     for (let i=0; i<this.thPlayers.length; i++) {
-      if (this.thPlayers[i].money==0) {
-        this.removePlayer(i, true);
+      let player = this.thPlayers[i];
+      if (player.money===0) {
+        this.thSpectators.set(player.id, this.lobby.players.get(player.id));
+        //notify them
+        api.sendMessage(player.id, "th_lost");
+        this.thPlayers.splice(i, 1);
         i--;
       }
     }
+    //remove ghost players
+    for (let index of this.ghostPlayers) {
+      this.thPlayers.splice(index, 1);
+    }
+    this.ghostPlayers = [];
 
     //give 10 seconds delay before new round
-    setTimeout(() => {
-      if (this==undefined) return;
+    this.newRoundTimer = setTimeout(() => {
+      if (this === undefined) return;
       //check if only one player is left
-      if (this.thPlayers.length==1) {
-        this.endOfGame();
-      } else {
-        this.newRound();
+      switch (this.thPlayers.length) {
+        case 0: this.stopGame(); break;
+        case 1: this.endOfGame(); break;
+        default: this.newRound();
       }
     }, 10*1000);
 
   }
 
-  private removePlayer(playerIndex: number, addToSpectators: boolean) {
+  private removePlayer(playerIndex: number, giveUp: boolean) {
     //add to spectators
     let thPlayer = this.thPlayers[playerIndex];
-    if (addToSpectators)
-      this.thSpectators.set(thPlayer.id, this.lobby.players.get(thPlayer.id));
-    //if player is choosing
-    if (this.turn==playerIndex) {
-      clearTimeout(this.turnTimer);
-      this.playerAction(THPlayer.OPTION_FOLD);
-    }
 
-    //notify players
-    {
+    if (giveUp) {
+      this.thSpectators.set(thPlayer.id, this.lobby.players.get(thPlayer.id));
+      //notify players
       let m = new THPlayerAction();
       m.action = "giveup";
       m.value = this.thPlayers[playerIndex].id;
@@ -478,8 +488,22 @@ export class TexasHoldEm extends GameMode {
       this.broadcastSpectators("th_player_action", m);
     }
 
-    //remove from players
-    this.thPlayers.splice(playerIndex, 1);
+    //mark for removing on round end
+    this.ghostPlayers.push(playerIndex);
+
+    //look if only one player is left
+    let activePlayers = 0;
+    for (let p of this.thPlayers) {
+      if (thPlayer === p) continue;
+      if (!p.folded && !p.allIn) activePlayers++;
+    }
+    if (activePlayers === 1) {
+      clearTimeout(this.turnTimer);
+      this.endRound();
+    } else if (this.turn === playerIndex) { //if player is choosing
+      clearTimeout(this.turnTimer);
+      this.playerAction(THPlayer.OPTION_FOLD);
+    }
   }
 
   private broadcastSpectators(command: Command | ServerCommand, message: PokerMessage) {
@@ -528,7 +552,7 @@ export class TexasHoldEm extends GameMode {
     let player = this.thPlayers[playerIndex];
     player.bet += amount;
     player.money -= amount;
-    player.allIn = player.money == 0;
+    player.allIn = player.money === 0;
     if (player.bet>this.highestBet) this.highestBet = player.bet;
   }
 
@@ -548,6 +572,12 @@ export class TexasHoldEm extends GameMode {
     player.money = 0;
     player.allIn = true;
     if (player.bet>this.highestBet) this.highestBet = player.bet;
+  }
+
+  public stopGame() {
+    this.running = false;
+    clearTimeout(this.newRoundTimer);
+    clearTimeout(this.turnTimer);
   }
 
   apiSettings(): THSettings {

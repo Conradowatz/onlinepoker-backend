@@ -1,10 +1,9 @@
 import {PokerMessage} from "./PokerMessage";
 import {GameMode} from "../../src/GameMode";
 import {
-  Equals,
   IsAlphanumeric,
   IsBoolean, IsIn,
-  IsInt, IsOptional, IsString,
+  IsInt, IsString,
   Length, Max, Min, ValidateIf,
 } from "class-validator";
 
@@ -115,9 +114,11 @@ export class THNewRound extends PokerMessage {
   bigBlindPlayer: number;
 }
 
+export type THPlayerActionType = "call" | "fold" | "check" | "raise" | "allin" | "giveup" | "turn";
+
 export class THPlayerAction extends PokerMessage {
   player: THPlayer;
-  action: "call" | "fold" | "check" | "raise" | "allin" | "giveup" | "turn";
+  action: THPlayerActionType;
   value?: string | number | Player;
 }
 
