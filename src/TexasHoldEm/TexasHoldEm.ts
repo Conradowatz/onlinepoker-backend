@@ -228,7 +228,7 @@ export class TexasHoldEm extends GameMode {
         }
       }
     }
-    if (playersToBet===0 && (this.playersToAsk<=0) || activePlayers<=1) {
+    if (playersToBet===0 && (this.playersToAsk<=0 || activePlayers<=1)) {
       this.nextCommunityCard();
       return;
     }
@@ -250,6 +250,12 @@ export class TexasHoldEm extends GameMode {
       m.player = this.thPlayers[this.turn].apiTHPlayer(false, this.turn);
       this.broadcastPlayers("th_player_action", m);
       this.broadcastSpectators("th_player_action", m);
+    }
+
+    //check for ghost player
+    if (this.ghostPlayers.includes(this.turn)) {
+      this.playerAction(THPlayer.OPTION_FOLD);
+      return;
     }
 
     //set options
@@ -381,9 +387,14 @@ export class TexasHoldEm extends GameMode {
   }
 
   private getNextPlayer(playerIndex: number):number {
-    let nextPlayer = (playerIndex+1) % this.thPlayers.length;
-    let player = this.thPlayers[nextPlayer];
-    if (player.folded || player.allIn) return this.getNextPlayer(nextPlayer);
+    let loopCounter = 0;
+    let nextPlayer, player;
+    do {
+      nextPlayer = (playerIndex + 1) % this.thPlayers.length;
+      player = this.thPlayers[nextPlayer];
+      loopCounter++;
+    } while ((player.folded || player.allIn) && loopCounter < this.thPlayers.length);
+    //TODO why is it sometimes looping? quick fix loop counter
     return nextPlayer;
   }
 
@@ -397,20 +408,20 @@ export class TexasHoldEm extends GameMode {
     this.thPlayers.forEach((p) => {if(!p.folded) activePlayers++});
     if (activePlayers>1) {
       //compare cards
-      let hands = [];
+      let hands = new Map<Hand, number>();
       let communityCardsString = this.communityCards.map((c) => c.getSolverString());
       for (let i = 0; i < this.thPlayers.length; i++) {
         if (!this.thPlayers[i].folded) {
           let cardStrings = communityCardsString.slice();
           cardStrings.push(this.thPlayers[i].cards[0].getSolverString(), this.thPlayers[i].cards[1].getSolverString());
           let hand = Hand.solve(cardStrings, "standard", false);
-          hands.push(hand);
+          hands.set(hand, i);
         }
       }
-      let winnerHands = Hand.winners(hands);
+      let winnerHands = Hand.winners(Array.from(hands.keys()));
       winnerHand = winnerHands[0].name;
       for (let wh of winnerHands) {
-        winningPlayers.push(hands.indexOf(wh));
+        winningPlayers.push(hands.get(wh));
         winningsCards = winningsCards.concat(wh.cards.map((c) => Card.fromString(c.toString())));
       }
     } else {
@@ -550,6 +561,7 @@ export class TexasHoldEm extends GameMode {
 
   private actionBet(playerIndex: number, amount: number) {
     let player = this.thPlayers[playerIndex];
+    amount = amount>player.money ? player.money : amount;
     player.bet += amount;
     player.money -= amount;
     player.allIn = player.money === 0;
